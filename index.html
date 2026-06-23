@@ -1153,7 +1153,7 @@ body.dark .goal-bar-bg { background: rgba(255,255,255,0.14); }
       <div class="no-income-emoji">🚗</div>
       <div class="section-title no-income-title">Nenhum ganho registrado</div>
       <div class="section-sub no-income-sub">Registre seus ganhos diários de Uber e Bolt para acompanhar o mês.</div>
-      <button class="btn btn-primary" onclick="openAddIncomeSheet()">+ Adicionar ganho do dia</button>
+      <button class="btn btn-primary" id="noIncomeAddBtn" onclick="openAddIncomeSheet()">+ Adicionar ganho do dia</button>
     </div>
 
     <!-- MAIN MONTH CONTENT -->
@@ -1447,7 +1447,7 @@ let bills = [];
 let monthData = {};
 let currentMonthKey = defaultReferenceMonthKey();
 // localSettings: device-only — never sent to cloud, each user keeps their own
-let localSettings = { darkMode: 'system', themeColor: 'green', ivaRate: 0 };
+let localSettings = { darkMode: 'system', themeColor: 'green' };
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
@@ -1568,7 +1568,17 @@ function formatDateStr(dateStr){
 async function loadLocalOnlySettings(){
   try{ const su = await window.storage.get('syncUrl'); syncUrl = su ? (su.value || '')    : '';   }catch(e){ syncUrl = ''; }
   // localSettings — appearance prefs, device-only, never synced to cloud
-  try{ const ls = await window.storage.get('localSettings'); if(ls){ localSettings = { ...localSettings, ...JSON.parse(ls.value) }; } }catch(e){}
+  try{
+    const ls = await window.storage.get('localSettings');
+    if(ls){
+      const parsed = JSON.parse(ls.value);
+      localSettings = { ...localSettings, ...parsed };
+      // Migration: if ivaRate was previously stored in localSettings, move it to profile
+      if(parsed.ivaRate && !profile.ivaRate){
+        profile.ivaRate = parsed.ivaRate;
+      }
+    }
+  }catch(e){}
 }
 
 // Loads profile/bills/monthData straight from localStorage.
@@ -1592,6 +1602,7 @@ function ensureVehicleDefaults(){
 
 // Writes the synced state to localStorage WITHOUT scheduling a new cloud push
 // (used right after a successful cloud GET, to avoid an immediate redundant POST).
+// Note: ivaRate is now part of profile (synced); localSettings = appearance only.
 async function persistLocalOnlySilently(){
   try{ await window.storage.set('bills',     JSON.stringify(bills));     }catch(e){}
   try{ await window.storage.set('monthData', JSON.stringify(monthData));}catch(e){}
@@ -1675,7 +1686,8 @@ function scheduleCloudPush(){
 
 async function pushToCloud(){
   if(!syncUrl) return;
-  // localSettings (appearance) is NEVER included — it's per-device only
+  // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
+  // ivaRate lives in profile and IS synced.
   const payload = { bills, monthData, profile };
   try{
     await fetch(syncUrl, {
@@ -1886,13 +1898,13 @@ function renderVehicleSettings(){
   }
 
   // IVA
-  document.getElementById('ivaRate').value = localSettings.ivaRate || '';
+  document.getElementById('ivaRate').value = profile.ivaRate || '';
 }
 function updateIvaRate(value){
-  localSettings.ivaRate = parseFloat(value) || 0;
-  persistLocalSettings();
+  profile.ivaRate = parseFloat(value) || 0;
+  persistProfile(); // synced to cloud via safeSet → pushToCloud
   renderGanhos(); renderDespesas();
-  showToast(`IVA ${localSettings.ivaRate > 0 ? localSettings.ivaRate + '%' : 'desativado'}`);
+  showToast(`IVA ${profile.ivaRate > 0 ? profile.ivaRate + '%' : 'desativado'}`);
 }
 function setVehicleType(type){
   ensureVehicleDefaults();
@@ -2136,11 +2148,11 @@ function autoCalculatedConsumption(){
   return null;
 }
 function ivaAmount(grossEarnings){
-  const rate = parseFloat(localSettings.ivaRate) || 0;
+  const rate = parseFloat(profile.ivaRate) || 0;
   return grossEarnings * (rate / 100);
 }
 function ivaRate(){
-  return parseFloat(localSettings.ivaRate) || 0;
+  return parseFloat(profile.ivaRate) || 0;
 }
 // Cards shared by the Dia/Semana/Mês stat views: efficiency (R$/km, R$/hora),
 // estimated vs. actual fuel cost (using the vehicle settings from "Você"),
@@ -2714,11 +2726,12 @@ function renderGanhosDay(){
   document.getElementById('monthLabel').textContent = isToday ? 'Hoje' : `${weekdayLabel(ganhosRefDate)}, ${dayMonthLabel(ganhosRefDate)}`;
   document.getElementById('monthHint').textContent = ganhosRefDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
   const t = document.getElementById('incomeSectionTitle'); if(t) t.textContent = 'Ganhos do dia';
+  const btn = document.getElementById('noIncomeAddBtn'); if(btn) btn.textContent = '+ Adicionar ganho do dia';
   const items = earningsInRange(dateIso, dateIso).sort((a,b)=>b.ts-a.ts);
   toggleGanhosEmptyState(items.length > 0);
   if(items.length === 0) return;
   document.getElementById('incomeSection').innerHTML = renderEarningsList(items, 'Nenhum ganho neste dia.') +
-    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho</div>`;
+    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho do dia</div>`;
   const fixedTotal = 0; // bills are monthly, don't apply to a single-day view
   renderEarningsCardsAndSummary(items, fixedTotal, sumAmount(variableExpensesInRange(dateIso, dateIso)));
 }
@@ -2729,6 +2742,7 @@ function renderGanhosWeek(){
   document.getElementById('monthLabel').textContent = `Semana de ${dayMonthLabel(start)} a ${dayMonthLabel(endD)}`;
   document.getElementById('monthHint').textContent = '';
   const t = document.getElementById('incomeSectionTitle'); if(t) t.textContent = 'Ganhos da semana';
+  const btn = document.getElementById('noIncomeAddBtn'); if(btn) btn.textContent = '+ Adicionar ganho da semana';
   const items = earningsInRange(startIso, endIso).sort((a,b)=> b.date.localeCompare(a.date) || b.ts-a.ts);
   toggleGanhosEmptyState(items.length > 0);
   if(items.length === 0) return;
@@ -2744,7 +2758,7 @@ function renderGanhosWeek(){
     dayRows += renderEarningsList(dayItems, '');
   }
   document.getElementById('incomeSection').innerHTML = dayRows +
-    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho</div>`;
+    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho da semana</div>`;
   renderEarningsCardsAndSummary(items, 0, sumAmount(variableExpensesInRange(startIso, endIso)));
 }
 function toggleGanhosEmptyState(hasItems){
@@ -2756,12 +2770,13 @@ function renderGanhosMonth(){
   document.getElementById('monthLabelMes').textContent = monthLabelFor(currentMonthKey);
   updateMonthHint();
   const t = document.getElementById('incomeSectionTitle'); if(t) t.textContent = 'Ganhos do mês';
+  const btn = document.getElementById('noIncomeAddBtn'); if(btn) btn.textContent = '+ Adicionar ganho do mês';
   const entry = ensureMonthEntry(currentMonthKey);
   const items = [...entry.earnings].sort((a,b)=> (b.date||'').localeCompare(a.date||'') || b.ts-a.ts);
   toggleGanhosEmptyState(items.length > 0);
   if(items.length === 0) return;
   document.getElementById('incomeSection').innerHTML = renderEarningsList(items, 'Nenhum ganho registrado.') +
-    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho</div>`;
+    `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho do mês</div>`;
   renderEarningsCardsAndSummary(items, totalFixedBills(entry), totalVariableExpenses(entry));
 }
 
@@ -2772,12 +2787,31 @@ function renderGanhos(){
 }
 
 function openAddIncomeSheet(){
-  const defaultDate = ganhosView === 'dia' ? isoDate(ganhosRefDate) : isoDate(new Date());
+  // Default date depends on which view is active
+  let defaultDate, sheetSub;
+  if(ganhosView === 'dia'){
+    defaultDate = isoDate(ganhosRefDate);
+    sheetSub = 'Se o turno passou da meia-noite, use o dia em que você <b>começou</b> a trabalhar.';
+  } else if(ganhosView === 'semana'){
+    // Default to today if today is in the current week, otherwise first day of the viewed week
+    const wStart = startOfWeek(ganhosRefDate);
+    const wEnd   = addDays(wStart, 6);
+    const todayIso = isoDate(new Date());
+    defaultDate = (todayIso >= isoDate(wStart) && todayIso <= isoDate(wEnd)) ? todayIso : isoDate(wStart);
+    sheetSub = 'Escolha o dia desta semana em que você trabalhou.';
+  } else {
+    // Mês — default to today if in current month, else last day of viewed month
+    const [y, m] = currentMonthKey.split('-').map(Number);
+    const todayIso = isoDate(new Date());
+    const monthPrefix = currentMonthKey + '-';
+    defaultDate = todayIso.startsWith(monthPrefix) ? todayIso : `${currentMonthKey}-01`;
+    sheetSub = 'Escolha o dia deste mês em que você trabalhou.';
+  }
   openSheet(`
     <div class="sheet-handle"></div>
     <div class="sheet-title">Novo ganho</div>
-    <div class="sheet-sub">Se o turno passou da meia-noite, use o dia em que você <b>começou</b> a trabalhar — é nele que o valor vai contar.</div>
-    <div class="field"><label>Dia de início do turno</label><input type="date" id="incDate" value="${defaultDate}" /></div>
+    <div class="sheet-sub">${sheetSub}</div>
+    <div class="field"><label>Dia do turno</label><input type="date" id="incDate" value="${defaultDate}" /></div>
     <div class="field">
       <label>Plataforma</label>
       <div class="platform-pick" id="platformPick">
