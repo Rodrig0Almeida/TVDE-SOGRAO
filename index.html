@@ -1426,14 +1426,24 @@ body.dark .goal-bar-bg { background: rgba(255,255,255,0.14); }
 <script>
 // --- Browser localStorage fallback ---
 if (!window.storage) {
+  // localStorage fallback — mirrors the Claude artifact storage Promise API
   window.storage = {
     get: async (key) => {
       const val = localStorage.getItem(key);
-      return val ? { value: val } : null;
+      if(val === null) throw new Error('Key not found: ' + key);
+      return { key, value: val, shared: false };
     },
     set: async (key, value) => {
       localStorage.setItem(key, value);
-      return true;
+      return { key, value, shared: false };
+    },
+    delete: async (key) => {
+      localStorage.removeItem(key);
+      return { key, deleted: true, shared: false };
+    },
+    list: async (prefix) => {
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys, shared: false };
     }
   };
 }
@@ -1566,26 +1576,24 @@ function formatDateStr(dateStr){
 // "syncUrl" is a device-local-only setting: it is never
 // part of the cloud payload and never triggers a cloud push.
 async function loadLocalOnlySettings(){
-  try{ const su = await window.storage.get('syncUrl'); syncUrl = su ? (su.value || '')    : '';   }catch(e){ syncUrl = ''; }
+  try{ const su = await window.storage.get('syncUrl'); syncUrl = su.value || ''; }catch(e){ syncUrl = ''; }
   // localSettings — appearance prefs, device-only, never synced to cloud
   try{
     const ls = await window.storage.get('localSettings');
-    if(ls){
-      const parsed = JSON.parse(ls.value);
-      localSettings = { ...localSettings, ...parsed };
-      // Migration: if ivaRate was previously stored in localSettings, move it to profile
-      if(parsed.ivaRate && !profile.ivaRate){
-        profile.ivaRate = parsed.ivaRate;
-      }
+    const parsed = JSON.parse(ls.value);
+    localSettings = { ...localSettings, ...parsed };
+    // Migration: if ivaRate was previously stored in localSettings, move it to profile
+    if(parsed.ivaRate && !profile.ivaRate){
+      profile.ivaRate = parsed.ivaRate;
     }
   }catch(e){}
 }
 
 // Loads profile/bills/monthData straight from localStorage.
 async function loadFromLocalStorage(){
-  try{ const p  = await window.storage.get('profile');   profile   = p  ? JSON.parse(p.value)  : { name:'', photo:null }; }catch(e){}
-  try{ const b  = await window.storage.get('bills');     bills     = b  ? JSON.parse(b.value)  : []; }catch(e){}
-  try{ const md = await window.storage.get('monthData'); monthData = md ? JSON.parse(md.value) : {}; }catch(e){}
+  try{ const p  = await window.storage.get('profile');   profile   = JSON.parse(p.value); }catch(e){ profile   = { name:'', photo:null }; }
+  try{ const b  = await window.storage.get('bills');     bills     = JSON.parse(b.value); }catch(e){ bills     = []; }
+  try{ const md = await window.storage.get('monthData'); monthData = JSON.parse(md.value);}catch(e){ monthData = {}; }
   ensureVehicleDefaults();
 }
 
@@ -1593,7 +1601,11 @@ async function loadFromLocalStorage(){
 function applyCloudData(data){
   bills     = Array.isArray(data.bills)     ? data.bills     : [];
   monthData = (data.monthData && typeof data.monthData === 'object') ? data.monthData : {};
-  profile   = (data.profile && typeof data.profile === 'object') ? data.profile : { name:'', photo:null };
+  const cloudProfile = (data.profile && typeof data.profile === 'object') ? data.profile : { name:'', photo:null };
+  // Preserve local photo — it's never sent to cloud (too large), so don't overwrite it on pull
+  const localPhoto = profile.photo;
+  profile = cloudProfile;
+  if(!profile.photo && localPhoto) profile.photo = localPhoto;
   ensureVehicleDefaults();
 }
 function ensureVehicleDefaults(){
@@ -1688,7 +1700,11 @@ async function pushToCloud(){
   if(!syncUrl) return;
   // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
   // ivaRate lives in profile and IS synced.
-  const payload = { bills, monthData, profile };
+  // profile.photo is stripped before cloud push — it's a base64 blob (~350KB) that would
+  // slow down or break the Apps Script endpoint. Photo stays local-only.
+  const profileForCloud = { ...profile };
+  delete profileForCloud.photo;
+  const payload = { bills, monthData, profile: profileForCloud };
   try{
     await fetch(syncUrl, {
       method: 'POST',
@@ -2919,8 +2935,12 @@ async function confirmNewExpense(){
 }
 async function deleteVariableExpense(id){
   if(!confirm('Remover esta despesa?')) return;
-  const entry = ensureMonthEntry(currentMonthKey);
-  entry.variableExpenses = entry.variableExpenses.filter(e => e.id !== id);
+  // Scan ALL months — an expense might have been recorded with a date from a different month
+  Object.keys(monthData).forEach(k => {
+    if(monthData[k].variableExpenses){
+      monthData[k].variableExpenses = monthData[k].variableExpenses.filter(e => e.id !== id);
+    }
+  });
   await persistMonthData(); renderDespesas();
 }
 
