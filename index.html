@@ -1713,7 +1713,13 @@ async function loadFromLocalStorage(){
 
 // Applies a JSON payload received from the Google Sheets / Apps Script endpoint.
 function applyCloudData(data){
-  bills     = Array.isArray(data.bills)     ? data.bills     : [];
+  // Smart merge: Keep local deletions. If a bill from the cloud doesn't exist locally, it means it was deleted.
+  const cloudBills = Array.isArray(data.bills) ? data.bills : [];
+  const localBillIds = new Set(bills.map(b => b.id));
+  const mergedBills = cloudBills.filter(cloudBill => localBillIds.has(cloudBill.id));
+  // Add any truly new bills from the cloud that aren't in local state at all
+  cloudBills.forEach(cloudBill => { if (!bills.find(b => b.id === cloudBill.id)) mergedBills.push(cloudBill); });
+  bills = mergedBills;
   monthData = (data.monthData && typeof data.monthData === 'object') ? data.monthData : {};
   const cloudProfile = (data.profile && typeof data.profile === 'object') ? data.profile : { name:'', photo:null };
   // Preserve local photo — it's never sent to cloud (too large), so don't overwrite it on pull
@@ -2060,6 +2066,41 @@ function renderSettings(){
   // IVA rate field
   const ivaEl = document.getElementById('ivaRate');
   if(ivaEl) ivaEl.value = profile.ivaRate || '';
+
+  // Clear previous duplicate bills section if it exists
+  const oldDuplicateSection = document.getElementById('duplicateBillsSection');
+  if (oldDuplicateSection) {
+      oldDuplicateSection.remove();
+  }
+
+  // DUPLICATE BILLS MANAGEMENT
+  const duplicateGroups = findDuplicateBills();
+  let duplicatesHtml = '';
+  if (duplicateGroups.length > 0) {
+      duplicatesHtml = `
+      <div id="duplicateBillsSection">
+        <div class="section-head" style="margin-top:28px;"><div class="section-title">🧹 Limpar Despesas Duplicadas</div></div>
+        <div class="section-sub" style="margin-bottom:10px;">Encontramos despesas fixas que parecem ser duplicadas. Você pode removê-las para corrigir os cálculos. A remoção é permanente.</div>
+        <div class="loans-box" style="padding:4px 14px; margin-bottom:0;">
+            ${duplicateGroups.map(group => {
+                const bill = group[0];
+                return `
+                <div class="bill-row">
+                    <div class="bill-info">
+                        <div class="bill-name">${escapeHtml(bill.name)}</div>
+                        <div class="bill-sub">${group.length} cópias encontradas · ${fmt(bill.defaultAmount)}</div>
+                    </div>
+                    <button class="btn-danger-text" style="background:transparent; border:none; cursor:pointer; font-weight:700; font-size:12px; padding: 8px 12px;" onclick="deleteBill('${bill.id}')">Apagar</button>
+                </div>`;
+            }).join('')}
+        </div>
+      </div>`;
+  }
+  // Insert the new section before the "Apagar todos os dados" button
+  const deleteAllBtn = document.querySelector('.delete-all-btn');
+  if (deleteAllBtn) {
+    deleteAllBtn.insertAdjacentHTML('beforebegin', duplicatesHtml);
+  }
 }
 
 function renderVehicleSettings(){
@@ -3313,24 +3354,34 @@ async function updateBillAmount(billId, value){
   await persistMonthData(); renderDespesas();
 }
 async function deleteBill(billId){
-  const b = bills.find(x=>x.id===billId);
-  if(!b) return;
-  const confirmMsg = `Remover permanentemente "${b.name}"?\n\nIsso vai apagar esta despesa fixa de TODOS os meses.`;
-  if(!confirm(confirmMsg)) return;
-  // Remove from global bills array — true deletion, not just hiding
-  bills = bills.filter(x => x.id !== billId);
-  // Also clean up any per-month overrides/paid/hidden refs to keep data tidy
-  Object.keys(monthData).forEach(k => {
-    const e = monthData[k];
-    if(!e) return;
-    delete e.billOverrides[billId];
-    delete e.billsPaid[billId];
-    delete e.hiddenBills[billId];
-  });
-  await persistBills();
-  await persistMonthData();
-  showToast('Despesa fixa removida');
-  renderDespesas();
+    const billToDelete = bills.find(b => b.id === billId);
+    if (!billToDelete) return;
+
+    const confirmMessage = `Você tem certeza que quer apagar a despesa "${billToDelete.name}"?\n\nEsta ação é permanente e irá remover esta despesa (e todas as suas duplicatas) de TODOS os meses.`;
+
+    if (confirm(confirmMessage)) {
+        // Find all bills with the same name and amount to remove all duplicates
+        const billsToRemove = bills.filter(b => b.name === billToDelete.name && b.defaultAmount === billToDelete.defaultAmount);
+        const idsToRemove = new Set(billsToRemove.map(b => b.id));
+
+        // Filter the main bills array to exclude all identified duplicates
+        bills = bills.filter(b => !idsToRemove.has(b.id));
+
+        // Clean up any related data from all month entries
+        Object.keys(monthData).forEach(monthKey => {
+            idsToRemove.forEach(id => {
+                delete monthData[monthKey].billOverrides?.[id];
+                delete monthData[monthKey].billsPaid?.[id];
+                delete monthData[monthKey].hiddenBills?.[id];
+            });
+        });
+
+        await persistBills();
+        await persistMonthData();
+        showToast('Despesa fixa removida permanentemente');
+        renderDespesas();
+        renderSettings(); // Refresh settings to update the duplicates list
+    }
 }
 
 function openNewBillSheet(){
@@ -3395,7 +3446,9 @@ function totalEarningsByPlatform(entry, platform){ return entry.earnings.filter(
 function totalKm(entry){ return entry.earnings.reduce((s,e)=>s+(e.km||0),0); }
 function totalVariableExpenses(entry){ return entry.variableExpenses.reduce((s,e)=>s+(e.amount||0),0); }
 function totalFixedBills(entry){
-  return bills.filter(b => !entry.hiddenBills[b.id]).reduce((s, b) => {
+  // Only include bills that were created in or before the current month and are not hidden
+  const relevantBills = bills.filter(b => (!b.createdMonthKey || b.createdMonthKey <= currentMonthKey) && !entry.hiddenBills[b.id]);
+  return relevantBills.reduce((s, b) => {
     const amount = billAmount(entry, b);
     const freq = b.frequency || 'mensal';
     if(freq === 'diaria'){
