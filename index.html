@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Corrida+</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F3A2E'/%3E%3Cg transform='translate(8,18)'%3E%3Cpath d='M6 16 L10 6 Q12 3 16 3 L32 3 Q36 3 38 6 L42 16' fill='none' stroke='%23D9A949' stroke-width='3' stroke-linecap='round'/%3E%3Crect x='2' y='15' width='44' height='14' rx='5' fill='%23D9A949'/%3E%3Ccircle cx='12' cy='31' r='6' fill='%231F3A2E' stroke='%23D9A949' stroke-width='2.5'/%3E%3Ccircle cx='36' cy='31' r='6' fill='%231F3A2E' stroke='%23D9A949' stroke-width='2.5'/%3E%3Crect x='2' y='20' width='11' height='6' rx='2' fill='%231F3A2E' opacity='0.5'/%3E%3Crect x='35' y='20' width='11' height='6' rx='2' fill='%231F3A2E' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F3A2E'/%3E%3Ccircle cx='22' cy='32' r='11' fill='none' stroke='%23D9A949' stroke-width='3.5'/%3E%3Ccircle cx='42' cy='32' r='11' fill='none' stroke='%23F6EFE2' stroke-width='3.5' opacity='.85'/%3E%3C/svg%3E" />
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjogIkNvcnJpZGErIiwgInNob3J0X25hbWUiOiAiQ29ycmlkYSsiLCAiZGVzY3JpcHRpb24iOiAiR2VzdFx1MDBlM28gZmluYW5jZWlyYSBwYXJhIG1vdG9yaXN0YSBkZSBhcHAiLCAic3RhcnRfdXJsIjogIi4vIiwgInNjb3BlIjogIi4vIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJvcmllbnRhdGlvbiI6ICJwb3J0cmFpdCIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNGNkVGRTIiLCAidGhlbWVfY29sb3IiOiAiIzFGM0EyRSIsICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDY0IDY0JyUzRSUzQ3JlY3Qgd2lkdGg9JzY0JyBoZWlnaHQ9JzY0JyByeD0nMTQnIGZpbGw9JyUyMzFGM0EyRScvJTNFJTNDY2lyY2xlIGN4PScyMicgY3k9JzMyJyByPScxMScgZmlsbD0nbm9uZScgc3Ryb2tlPSclMjNEOUE5NDknIHN0cm9rZS13aWR0aD0nMy41Jy8lM0UlM0NjaXJjbGUgY3g9JzQyJyBjeT0nMzInIHI9JzExJyBmaWxsPSdub25lJyBzdHJva2U9JyUyM0Y2RUZFMicgc3Ryb2tlLXdpZHRoPSczLjUnIG9wYWNpdHk9Jy44NScvJTNFJTNDL3N2ZyUzRSIsICJzaXplcyI6ICJhbnkiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn1dfQ==" />
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAFc0lEQVR4nO3dPXLTUBSGYcXDLhiGmoYFsIA0sA9K1kLJPqDJArKANNQZhn1QKCMc2d/9073nHEvv0xIszdzXR4psKXfTeO8/fTTYytE8Pz6N3sTdoNclCEuDQukcB0346ltJnzhoIpoulWyNgywi25jIact/pozgNi5Q4+Qgi9vSNkJaJgdl3Jy2JaubHGRx66pGSMXkoIwdqFrE0jgoYzfKl7IoDsrYmcIFzcdBGbtUsqyZOChjx7KLm4qDMnYvvcQyDso4iMRCb7p8jn27Hgdj41DUcl+JgzIO6Oqic1iBtI6DsXFYl0t/Sv8zDmUVAIcVSP/jYGxgep0BkwMScUB6iYNjChZLDEwOSMQB6TRxTMGFOQkmByTigEQckO444YDC5IBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oD0xnsHSj18e5v+gfvvf232JOv3r5/pH/jw+YvNnmwU+nbIbBCKfSjZIJTIoUSMo7mJS6MraW7iUsBKYsXRMYtzIxLpmMW5UIlEiWNQFud6JTIoi3NBEgnx24pBGb22YlCG2VaynCeHTRYrbSPEZcF8R4jn5HApo227Xm9l3xHiFodXGQ1b910hx637xOFbRtU+RDj8e+2DwznHiEtbgy6Xjbi0dUOXy6zjqF3FhpPHXpuoXcWGxTPYxBamcVQt28bLEhu3VbVsG9fMcltVIn7w1uVq1fwio09uuizV/CIRTm5W7E5IC9ep76Xuwldb7VvhOvV9Exe+mmVDRnG4lFH1msseupRR9ZpmfYS4fD4b9wlq91ced+AP8qnKzOKEtGRsGHwDo2Q33t3/yP6MwfqVzAaD3QgxOWy+m9NlKzbv7CDzY3gcob7el95WdmxYrll2WwZnHiEmB2JyjsP+y57NW7Qf9e4Hl7FxRPiArVDJqWg0o48snpPD62aChu16vYmP+2UfBEcckAbGkT7h8L1BbbX19AmH72xPb33oaQeTAxJxQCIOSMQBiTggEQck4oBEHJCIA9LAONLXQEPdK/vn4WvihyPfKzv06i2TAxJxQOL5HEV4Pkd/cZ4NmpU+7Yhp9MfFzocV++HRvEX7N7H73bOcc0AaHkf2yGI5PNLbyh5ZLN/KEZ6RHWJy8KhJl61kWcRRclo6uo/C+3VL3o6jVy7IjbJTkMkxG9dH91ce10eQmTEziqPtISpd1D4axPEhGY6PBrnKbnK49NH20BiXPqKVMcV8Jti8opYPjGs2r6jlA+Ms8ahJHjUp8ZBaHlIr+fzVhCB335eMpSAz3+WuO59fZSN8IFe4D+4PyXDcB7frHKHulU2LfK/sUDyfo8gxn88R4m+8mZ2CbM/R7BQkwuEsxOVzHjXpspWsEJNjwZ8ODZLFLFYcM/7ocBAR41jw58p9hY7jXKgnIadF+BJXFzcTB+yF+G0FMREHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IJ2eH5+89wERPT8+MTkgEQck4oB0mqaJ0w6szEkwOSARB6SXODiyYLHEwOSARByQ/sfBkQXT6wyYHJBexcHwOLhVAOvJQR+Hdbn0HFYgXYmD4XFAVxf9+uSgj0NRy81hBZKMg+FxEImFTk0O+ti99BJnDiv0sWPZxc2fc9DHLpUsa9EJKX3sTOGClv62Qh+7Ub6UFb/K0scOVC3iXcMG+Mtft6jhvd1yEYwRcnPalqxlciwYIfFteSdvunzOCAlu4wJtmhwLRkg0Xd63feJYUImvvrO8cxwLKrE06Pg+Ko5zhDKCwQnfP+ruBWRLT+snAAAAAElFTkSuQmCC" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -379,29 +379,7 @@ body {
 .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--text-muted); }
 .chart-legend-item { display: flex; align-items: center; gap: 5px; }
 .chart-legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.chart-text { fill: rgba(42,36,32,0.52); font-family: 'Inter', sans-serif; }
 .stats-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 13px; }
-
-/* ================================================================
-   SECTION LABELS (shared across screens)
-   ================================================================ */
-.section-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.section-head.centered { align-items: center; }
-.section-title {
-  font-weight: 700;
-  font-size: var(--text-md);
-  color: var(--ink);
-}
-.section-sub {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-.no-income-title { font-size: var(--text-md); font-weight: 600; margin-bottom: 4px; }
-.no-income-sub   { font-size: var(--text-sm); color: var(--text-muted); }
 
 /* ================================================================
    SCREENS
@@ -837,177 +815,110 @@ body {
    DARK MODE — full system
    ================================================================ */
 body.dark {
-  --cream:          #16161B;
-  --cream-2:        #22222A;
-  --ink:            #F0EDE6;
-  --line:           rgba(255,255,255,0.13);
-  --text-muted:     rgba(230,225,215,0.62);
-  --text-faint:     rgba(230,225,215,0.40);
-  --shadow-sm:      0 1px 3px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.45);
-  --shadow-md:      0 2px 4px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.55);
+  --cream:          #17171C;
+  --cream-2:        #24242A;
+  --ink:            #F5F1E9;
+  --line:           rgba(255,255,255,0.14);
+  --text-muted:     rgba(237,232,224,0.66);
+  --text-faint:     rgba(237,232,224,0.46);
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-md:      0 2px 4px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.5);
+  /* Lighter stand-in for --vault when it's used as TEXT/ICON color on a dark
+     background. --vault itself stays the theme's original dark shade because
+     it's still used as a background fill (cards, buttons, FAB-like accents)
+     which needs to stay rich/dark even in dark mode. */
   --vault-text:     var(--vault-text-dark, var(--vault-light));
 }
 /* body background */
-body.dark {
-  background: #16161B;
-  background-image:
-    radial-gradient(circle at 100% 0%, rgba(184,134,43,0.09), transparent 45%),
-    radial-gradient(circle at 0% 100%, rgba(31,58,46,0.12), transparent 40%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: var(--ink);
-}
+body.dark { background: #17171C; background-image: radial-gradient(circle at 100% 0%, rgba(184,134,43,0.08), transparent 45%), radial-gradient(circle at 0% 100%, rgba(31,58,46,0.10), transparent 40%); background-repeat: no-repeat; background-attachment: fixed; color: var(--ink); }
 
-/* ---- surface cards & interactive elements ---- */
+/* white cards → dark surface */
 body.dark .vault-card,
 body.dark .action-btn,
+body.dark .month-nav-btn,
+body.dark .month-picker-year-btn,
 body.dark .income-row-compact,
 body.dark .split-row,
 body.dark .loans-box,
 body.dark .stat-card,
-body.dark .chart-box { background: #252530; color: var(--ink); border-color: rgba(255,255,255,0.10); }
+body.dark .chart-box,
+body.dark .add-dashed-btn,
+body.dark .platform-pick-opt { background: #2A2A31; color: var(--ink); border-color: rgba(255,255,255,0.13); }
 
-body.dark .month-nav-btn,
-body.dark .month-picker-year-btn { background: #252530; color: var(--ink); border-color: rgba(255,255,255,0.12); }
+/* photo btn */
+body.dark .photo-btn { background: #1E1E24; color: var(--ink); border-color: rgba(255,255,255,0.12); }
 
-body.dark .add-dashed-btn { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.18); color: var(--vault-light); }
-body.dark .platform-pick-opt { background: #252530; color: var(--ink); border-color: rgba(255,255,255,0.13); }
-body.dark .platform-pick-opt.active { border-color: var(--brass-light); background: rgba(217,169,73,0.15); }
-
-/* ---- form inputs ---- */
+/* form inputs */
 body.dark .field input,
 body.dark .field select,
 body.dark .field textarea,
-body.dark .bill-amount-input {
-  background: #1C1C23;
-  color: var(--ink);
-  border-color: rgba(255,255,255,0.14);
-}
+body.dark .bill-amount-input { background: #1E1E24; color: var(--ink); border-color: rgba(255,255,255,0.12); }
 body.dark .field input::placeholder,
-body.dark .field textarea::placeholder { color: rgba(230,225,215,0.32); }
-body.dark .field select option { background: #1C1C23; color: var(--ink); }
-body.dark .field label { color: var(--vault-light); }
+body.dark .field textarea::placeholder { color: rgba(237,232,224,0.35); }
+body.dark .field select option { background: #1E1E24; color: var(--ink); }
+body.dark .field label { color: var(--vault-text); }
 
-/* money field € symbol */
-body.dark .field-money::before { color: rgba(230,225,215,0.45); }
-
-/* ---- segmented controls ---- */
-body.dark .seg { background: #1C1C23; border-color: rgba(255,255,255,0.10); }
+/* segmented controls */
+body.dark .seg { background: #1E1E24; border-color: rgba(255,255,255,0.1); }
 body.dark .seg-opt { color: var(--text-muted); }
-body.dark .seg-opt.active { background: var(--vault); color: #fff; }
+body.dark .seg-opt.active { color: #fff; }
 
-/* ---- tab bar ---- */
-body.dark .tabbar { background: linear-gradient(to top, #0e0e12 60%, rgba(14,14,18,0)); }
-body.dark .tabbar-inner { background: rgba(18,18,24,0.97); border-color: rgba(255,255,255,0.08); }
-body.dark .tab { color: rgba(230,225,215,0.55); }
-body.dark .tab.active { color: var(--brass-light); background: rgba(217,169,73,0.12); }
+/* tab bar */
+body.dark .tabbar { background: linear-gradient(to top, #111114 60%, rgba(17,17,20,0)); }
+body.dark .tabbar-inner { background: rgba(20,20,26,0.97); border-color: rgba(255,255,255,0.09); }
+body.dark .tab { color: rgba(237,232,224,0.62); }
+body.dark .tab.active { color: var(--vault-text); background: rgba(255,255,255,0.1); }
 
-/* ---- sheet / modal ---- */
-body.dark .sheet { background: #1A1A21; }
-body.dark .sheet-title { color: var(--ink); }
-body.dark .sheet-sub { color: var(--text-muted); }
-body.dark .sheet-handle { background: rgba(255,255,255,0.18); }
+/* sheet / modal */
+body.dark .sheet { background: #141418; }
 
-/* ---- overlay ---- */
-body.dark .overlay { background: rgba(0,0,0,0.70); }
+/* overlay darker */
+body.dark .overlay { background: rgba(0,0,0,0.65); }
 
-/* ---- lists & rows ---- */
+/* activity items */
 body.dark .activity-item { border-color: rgba(255,255,255,0.07); }
 body.dark .bill-row { border-color: rgba(255,255,255,0.07); }
-body.dark .ms-row { border-color: rgba(255,255,255,0.10); }
-body.dark .ms-row.divider { border-color: rgba(255,255,255,0.16); }
-body.dark .income-row-compact { border-color: rgba(255,255,255,0.07); }
+body.dark .ms-row { border-color: rgba(255,255,255,0.12); }
+body.dark .ms-row.divider { border-color: rgba(255,255,255,0.18); }
 
-/* ---- banners & callouts ---- */
-body.dark .installment-preview { background: rgba(184,134,43,0.18); }
-body.dark .leftover-banner { background: rgba(184,134,43,0.12); border-color: rgba(184,134,43,0.28); }
+/* installment preview */
+body.dark .installment-preview { background: rgba(184,134,43,0.15); }
 
-/* ---- month picker ---- */
-body.dark .month-picker-cell { background: #1C1C23; color: var(--ink); border-color: transparent; }
-body.dark .month-picker-cell.is-current { border-color: var(--brass-light); }
-body.dark .month-picker-cell.is-selected { background: var(--vault); color: #fff; }
+/* leftover banner */
+body.dark .leftover-banner { background: rgba(184,134,43,0.1); border-color: rgba(184,134,43,0.25); }
 
-/* ---- split ---- */
+/* month picker cell */
+body.dark .month-picker-cell { background: #1E1E24; color: var(--ink); }
+
+/* split total row */
 body.dark .split-total-row { border-color: rgba(255,255,255,0.12); }
-body.dark .split-total-row.balanced { color: var(--vault-light); }
+body.dark .split-total-row.balanced { color: var(--vault-text); }
 
-/* ---- profile / settings ---- */
-body.dark .profile-card { background: #1C1C23; border-color: rgba(255,255,255,0.09); }
-body.dark .profile-card-name-input { color: var(--ink); border-color: rgba(255,255,255,0.14); }
-body.dark .profile-action-btn { color: var(--vault-light); border-color: rgba(255,255,255,0.14); }
-body.dark .profile-action-btn:active { background: rgba(255,255,255,0.07); }
-body.dark .profile-action-btn.danger { color: var(--terracotta-light); }
-body.dark .delete-all-btn { color: var(--terracotta-light); }
+/* profile card */
+body.dark .profile-card { background: #1E1E24; border-color: rgba(255,255,255,0.09); }
 
-/* ---- sync pill ---- */
+/* sync pill */
 body.dark .sync-pill { background: rgba(255,255,255,0.08); color: var(--ink); }
-body.dark .sync-dot { background: var(--vault-light); }
-body.dark .sync-dot.off { background: var(--terracotta-light); }
 
-/* ---- sync URL lock box ---- */
-body.dark #syncUrlLockedView { background: rgba(255,255,255,0.05); color: var(--ink); }
-body.dark #syncUrlLockedView button { background: #252530; color: var(--terracotta-light); border-color: rgba(255,255,255,0.14); }
-body.dark #syncUrlLockedView div { color: var(--text-muted); }
-
-/* ---- brand / screen titles ---- */
+/* brand / screen titles, balances, buttons that use --vault as TEXT color
+   on the page background (not as a colored chip/button fill) */
 body.dark .brand-name,
-body.dark .screen-title { color: var(--vault-light); }
-body.dark .tabbar-inner::before { color: var(--vault-light); }
-
-/* ---- vault-balance / detail-balance ---- */
+body.dark .screen-title,
 body.dark .vault-balance,
-body.dark .detail-balance { color: var(--ink); }
+body.dark .detail-balance,
+body.dark .month-nav-btn,
+body.dark .month-picker-year-btn,
+body.dark .tabbar-inner::before { color: var(--vault-text); }
 body.dark .vault-balance.negative,
 body.dark .detail-balance.negative { color: var(--terracotta-light); }
 
-/* ---- ms-final summary row ---- */
-body.dark .ms-final.positive { color: var(--vault-light); }
-body.dark .ms-final.negative { color: var(--terracotta-light); }
+/* misc hardcoded light-mode text colors that need a dark-aware swap */
+body.dark .transfer-preview { color: rgba(237,232,224,0.75); }
+body.dark .chart-text { fill: rgba(237,232,224,0.6); }
 
-/* ---- ms-row label/value ---- */
-body.dark .ms-label { color: var(--text-muted); }
-body.dark .ms-value { color: var(--ink); }
-
-/* ---- stat cards in dark ---- */
-body.dark .stat-card-label { color: var(--text-muted); }
-body.dark .stat-card-value { color: var(--ink); }
-body.dark .stat-card-value.negative { color: var(--terracotta-light); }
-
-/* ---- chart boxes in dark ---- */
-body.dark .chart-box-title { color: var(--ink); }
-body.dark .chart-box-sub { color: var(--text-muted); }
-body.dark .chart-legend { color: var(--text-muted); }
-
-/* ---- section labels ---- */
-body.dark .section-title { color: var(--ink); }
-body.dark .section-sub { color: var(--text-muted); }
-
-/* ---- misc text ---- */
-body.dark .transfer-preview { color: rgba(230,225,215,0.75); }
-body.dark .chart-text { fill: rgba(230,225,215,0.55); }
-
-/* chart text in SVG bars — always use CSS class so dark mode can target it */
-body.dark .goal-bar-bg { background: rgba(255,255,255,0.12); }
-
-/* ---- photo btn ---- */
-body.dark .photo-btn { background: #1C1C23; color: var(--ink); border-color: rgba(255,255,255,0.12); }
-
-/* ---- add-profile-btn ---- */
-body.dark .add-profile-btn { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.16); color: var(--vault-light); }
-
-/* ---- empty notes ---- */
-body.dark .empty-note { color: var(--text-faint); }
-body.dark .stats-empty { color: var(--text-muted); }
-
-/* ---- lucro hero card text always white (it's on a coloured bg) ---- */
-/* already set inline with color:#fff, no override needed */
-
-/* ---- import textarea ---- */
-body.dark #importJsonInput { background: #1C1C23; color: var(--ink); border-color: rgba(255,255,255,0.14); }
-body.dark #importJsonInput::placeholder { color: rgba(230,225,215,0.32); }
-
-/* ---- inline dark buttons (lock/unlock URL) ---- */
-body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #fff; border-color: transparent; }
+/* progress bar track — the original near-black/low-opacity track is
+   invisible against the dark background, so use a light translucent one */
+body.dark .goal-bar-bg { background: rgba(255,255,255,0.14); }
 
 
 /* ================================================================
@@ -1188,26 +1099,6 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 </head>
 <body>
 
-<div id="splashScreen" style="
-  position:fixed;inset:0;
-  background:var(--vault);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  z-index:999;
-  transition:opacity 0.5s ease;
-">
-  <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="width:72px;height:72px;margin-bottom:20px;">
-    <rect width="64" height="64" rx="14" fill="#2C4F3D"/>
-    <g transform="translate(8,18)">
-      <path d="M6 16 L10 6 Q12 3 16 3 L32 3 Q36 3 38 6 L42 16" fill="none" stroke="#D9A949" stroke-width="3" stroke-linecap="round"/>
-      <rect x="2" y="15" width="44" height="14" rx="5" fill="#D9A949"/>
-      <circle cx="12" cy="31" r="6" fill="#1F3A2E" stroke="#D9A949" stroke-width="2.5"/>
-      <circle cx="36" cy="31" r="6" fill="#1F3A2E" stroke="#D9A949" stroke-width="2.5"/>
-    </g>
-  </svg>
-  <div style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;color:#F6EFE2;letter-spacing:-0.01em;">Corrida+</div>
-  <div id="splashMsg" style="font-size:12px;color:rgba(246,239,226,0.55);margin-top:10px;font-weight:500;">A carregar…</div>
-</div>
-
 <div class="app" id="app">
 
   <!-- ===================== GANHOS ===================== -->
@@ -1215,7 +1106,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     <div class="topbar">
       <div class="screen-title-group">
         <div class="screen-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12 L5 7 Q6 5 8 5 L16 5 Q18 5 19 7 L21 12" stroke-linecap="round"/><rect x="2" y="11" width="20" height="8" rx="2"/><circle cx="7" cy="20" r="2" fill="currentColor" stroke="none"/><circle cx="17" cy="20" r="2" fill="currentColor" stroke="none"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round"/></svg>
         </div>
         <div class="screen-title">Ganhos</div>
       </div>
@@ -1357,6 +1248,34 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <div class="theme-color-grid" id="themeColorGrid"></div>
     </div>
 
+    <!-- VEÍCULO -->
+    <div class="section-head" style="margin-top:20px;"><div class="section-title">Seu veículo</div></div>
+    <div class="field" style="margin-top:8px;">
+      <label>Tipo</label>
+      <div class="seg" id="vehicleTypeSeg">
+        <div class="seg-opt" data-t="combustao" onclick="setVehicleType('combustao')">⛽ Combustão</div>
+        <div class="seg-opt" data-t="eletrico" onclick="setVehicleType('eletrico')">🔋 Elétrico</div>
+      </div>
+    </div>
+    <div id="vehicleFuelFields">
+      <div class="field" style="margin-top:8px;">
+        <label>Combustível</label>
+        <select id="vehicleFuelType" onchange="updateVehicleFuelType(this.value)"></select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px;">
+      <label id="vehiclePriceLabel">Preço do combustível</label>
+      <input type="number" id="vehiclePrice" placeholder="0,00" inputmode="decimal" onchange="updateVehicleField('price', this.value)" />
+    </div>
+    <div id="vehicleConsumptionDisplay" style="margin-top:8px; background:rgba(31,58,46,0.06); border-radius:var(--r-md); padding:12px 14px; display:none;">
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); margin-bottom:4px;" id="vehicleConsumptionLabel">Consumo médio calculado</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:var(--text-md);" id="vehicleConsumptionCalc">—</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Calculado automaticamente a partir dos km rodados e combustível abastecido.</div>
+    </div>
+    <div class="section-sub" style="margin-top:6px; font-size:11px; line-height:1.5;">
+      O consumo médio é calculado automaticamente com base nos km rodados e no combustível abastecido registrado nas despesas variáveis.
+    </div>
+
     <!-- IVA / IMPOSTO -->
     <div class="section-head" style="margin-top:20px;"><div class="section-title">IVA / Imposto</div></div>
     <div class="field" style="margin-top:8px;">
@@ -1372,37 +1291,15 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     </div>
 
     <!-- SINCRONIZAÇÃO -->
-    <div class="section-head" style="margin-top:20px;"><div class="section-title">Sincronização</div></div>
-    <div id="syncUrlLockedView" style="background:rgba(31,58,46,0.06);border-radius:var(--r-md);padding:14px;margin-top:8px;display:flex;align-items:center;gap:12px;">
-      <div style="font-size:22px;">🔒</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:var(--text-sm);">URL de Sincronização</div>
-        <div id="syncUrlMasked" style="font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-all;"></div>
-      </div>
-      <button onclick="unlockSyncUrl()" style="font-size:11px;padding:6px 12px;border-radius:var(--r-full);border:1.5px solid var(--line);background:#fff;cursor:pointer;color:var(--terracotta);font-weight:700;white-space:nowrap;">✏️ Editar</button>
-    </div>
-    <div id="syncUrlEditView" style="display:none;margin-top:8px;">
-      <div class="field">
-        <label>URL do Google Apps Script</label>
-        <input type="text" id="syncUrl" placeholder="https://script.google.com/macros/s/..." oninput="saveSyncUrl()" style="font-size:12px;" />
-      </div>
-      <div style="display:flex;gap:8px;margin-top:6px;">
-        <button onclick="lockSyncUrl()" style="flex:1;padding:10px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔒 Bloquear URL</button>
-      </div>
+    <div class="field" style="margin-top:20px;">
+      <label>URL de Sincronização (Google Sheets)</label>
+      <input type="url" id="syncUrl" placeholder="https://script.google.com/macros/s/..." oninput="saveSyncUrl()" />
       <div class="section-sub" style="margin-top:6px; font-size:11px; line-height:1.5;">
-        Cole aqui a URL do seu Google Apps Script. Após guardar, bloqueie para evitar apagar acidentalmente.
+        Cole aqui a URL do seu Google Apps Script. Os dados serão enviados automaticamente ao editar e buscados ao abrir o app. Toque no indicador de status no topo para sincronizar manualmente.
       </div>
     </div>
 
     <button class="delete-all-btn" onclick="confirmResetAll()">Apagar todos os dados</button>
-
-    <!-- IMPORTAR DADOS -->
-    <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
-    <div class="section-sub" style="margin-bottom:10px;">Se a sincronização automática não funcionar, cole aqui o JSON copiado do Google Sheets para importar os seus dados.</div>
-    <textarea id="importJsonInput" placeholder='Cole o JSON aqui… {"bills":[…],"monthData":{…},"profile":{…}}' style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:12px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--ink);resize:vertical;" oninput="this.style.borderColor=''"></textarea>
-    <button onclick="importFromJson()" style="width:100%;margin-top:8px;padding:13px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Importar dados</button>
-
-    <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--text-faint);">Corrida+ v<span id="appVersionDisplay"></span></div>
   </div>
 
   <!-- ===================== ESTATÍSTICAS ===================== -->
@@ -1429,10 +1326,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <div class="month-nav-btn" onclick="changeStatsDayWeek(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <div style="text-align:center;">
-        <div class="month-nav-label" id="statsLabel">Hoje</div>
-        <div id="statsLabelYear" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:1px;"></div>
-      </div>
+      <div><div class="month-nav-label" id="statsLabel">Hoje</div></div>
       <div class="month-nav-btn" onclick="changeStatsDayWeek(1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1475,10 +1369,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <div class="month-nav-btn" onclick="changeLucroDayWeek(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <div style="text-align:center;">
-        <div class="month-nav-label" id="lucroLabel">Hoje</div>
-        <div id="lucroLabelYear" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:1px;"></div>
-      </div>
+      <div><div class="month-nav-label" id="lucroLabel">Hoje</div></div>
       <div class="month-nav-btn" onclick="changeLucroDayWeek(1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1533,11 +1424,6 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 <div class="toast" id="toast"></div>
 
 <script>
-// ---------------------------------------------------------------
-// APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
-// ---------------------------------------------------------------
-const APP_VERSION = '2.4.0';
-
 // --- Browser localStorage fallback ---
 if (!window.storage) {
   // localStorage fallback — mirrors the Claude artifact storage Promise API
@@ -1591,8 +1477,6 @@ const SYNC_PILL_SCREENS = ['ganhos','despesas','lucro','settings','stats'];
 
 const EXPENSE_CATEGORIES = [
   { key:'combustivel',  label:'Combustível',       emoji:'⛽' },
-  { key:'aluguer',      label:'Aluguer carro',     emoji:'🚗' },
-  { key:'feira',        label:'Feira',             emoji:'🛒' },
   { key:'manutencao',   label:'Manutenção',        emoji:'🔧' },
   { key:'lavagem',      label:'Lavagem',           emoji:'🧼' },
   { key:'pneu_oleo',    label:'Pneu / Óleo',       emoji:'🛞' },
@@ -1608,7 +1492,9 @@ const FUEL_TYPES = [
 
 function monthKeyFor(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
 function defaultReferenceMonthKey(){
-  return monthKeyFor(new Date());
+  const now = new Date();
+  const d = now.getDate() >= 25 ? new Date(now.getFullYear(), now.getMonth()+1, 1) : now;
+  return monthKeyFor(d);
 }
 function previousMonthKey(key){
   const [y,m] = key.split('-').map(Number);
@@ -1721,24 +1607,6 @@ function applyCloudData(data){
   profile = cloudProfile;
   if(!profile.photo && localPhoto) profile.photo = localPhoto;
   ensureVehicleDefaults();
-
-  // ── Backward-compat migration ──────────────────────────────────
-  // Old data: earnings may have no 'platform' field (default to 'uber')
-  // Old data: monthData entries may have missing arrays
-  Object.keys(monthData).forEach(k => {
-    const e = monthData[k];
-    if(!e) return;
-    if(!e.earnings)          e.earnings          = [];
-    if(!e.variableExpenses)  e.variableExpenses   = [];
-    if(!e.billOverrides)     e.billOverrides      = {};
-    if(!e.billsPaid)         e.billsPaid          = {};
-    if(!e.hiddenBills)       e.hiddenBills        = {};
-    e.earnings.forEach(earning => {
-      if(!earning.platform) earning.platform = 'uber';
-    });
-  });
-  // Old bills may have no frequency
-  bills.forEach(b => { if(!b.frequency) b.frequency = 'mensal'; });
 }
 function ensureVehicleDefaults(){
   if(!profile.vehicle) profile.vehicle = { type:'combustao', fuelType:'gasolina', consumption:0, price:0 };
@@ -1763,87 +1631,35 @@ function hideLoadingState(){
   document.getElementById('loadingState').style.display = 'none';
 }
 
+// Called once on page open, and manually whenever the user taps the sync pill.
+// Does a SINGLE fetch — no polling/setInterval, since Apps Script rate-limits.
 async function loadAll(){
-  const splashMsg = document.getElementById('splashMsg');
-  const splash    = document.getElementById('splashScreen');
-  function setSplash(msg){ if(splashMsg) splashMsg.textContent = msg; }
-
-  // Always load local data first so the app works instantly offline
   await loadLocalOnlySettings();
-  await loadFromLocalStorage();
+
+  if(syncUrl){
+    showLoadingState('Buscando dados da nuvem…');
+    try{
+      const res = await fetch(syncUrl, { method: 'GET' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if(!data || typeof data !== 'object') throw new Error('Resposta inválida da planilha');
+      applyCloudData(data);
+      await persistLocalOnlySilently();
+      setSyncStatus('synced');
+    }catch(err){
+      console.warn('Falha ao buscar dados da nuvem, usando dados locais:', err);
+      await loadFromLocalStorage();
+      setSyncStatus('nolink');
+    }
+  } else {
+    await loadFromLocalStorage();
+    setSyncStatus('nolink');
+  }
 
   applyTabVisibility();
   applyAllAppearance();
   hideLoadingState();
   renderGanhos();
-
-  // Hide splash as soon as local data is ready
-  if(splash){
-    splash.style.opacity = '0';
-    setTimeout(()=>{ splash.style.display='none'; }, 400);
-  }
-
-  // Then try cloud sync in background (non-blocking)
-  if(syncUrl){
-    setSplash('A sincronizar…');
-    setSyncStatus('saving');
-    _doCloudSync();
-  } else {
-    setSyncStatus('nolink');
-  }
-}
-
-async function _doCloudSync(){
-  if(!syncUrl){ setSyncStatus('nolink'); return; }
-  return new Promise((resolve) => {
-    // Google Apps Script blocks fetch() GET due to CORS redirect chains.
-    // JSONP via <script> tag bypasses this and is the standard approach.
-    const cbName = '_gsync_' + Date.now();
-    const timeoutId = setTimeout(() => {
-      cleanup();
-      setSyncStatus('nolink');
-      resolve();
-    }, 15000);
-
-    function cleanup(){
-      clearTimeout(timeoutId);
-      delete window[cbName];
-      const el = document.getElementById('_jsonp_script');
-      if(el) el.remove();
-    }
-
-    window[cbName] = function(data){
-      cleanup();
-      try{
-        if(!data || typeof data !== 'object') throw new Error('Dados inválidos');
-        applyCloudData(data);
-        persistLocalOnlySilently().then(() => {
-          setSyncStatus('synced');
-          renderGanhos();
-          const active = document.querySelector('.screen.active');
-          if(active){
-            const id = active.id;
-            if(id==='screen-despesas') renderDespesas();
-            else if(id==='screen-stats') renderStats();
-            else if(id==='screen-lucro') renderLucro();
-            else if(id==='screen-settings') renderSettings();
-          }
-          showToast('✅ Sincronizado com sucesso');
-        });
-      }catch(e){
-        setSyncStatus('nolink');
-      }
-      resolve();
-    };
-
-    // Append ?callback=cbName to the Apps Script URL
-    const sep = syncUrl.includes('?') ? '&' : '?';
-    const script = document.createElement('script');
-    script.id  = '_jsonp_script';
-    script.src = syncUrl + sep + 'callback=' + cbName;
-    script.onerror = () => { cleanup(); setSyncStatus('nolink'); resolve(); };
-    document.head.appendChild(script);
-  });
 }
 
 async function persistProfile()   { await safeSet('profile',   profile);   }
@@ -2029,11 +1845,7 @@ function personAvatarInner(){
 }
 
 function renderSettings(){
-  const syncUrlInput = document.getElementById('syncUrl');
-  if(syncUrlInput) syncUrlInput.value = syncUrl || '';
-  const vEl = document.getElementById('appVersionDisplay');
-  if(vEl) vEl.textContent = APP_VERSION;
-  renderSyncUrlUI();
+  document.getElementById('syncUrl').value = syncUrl || '';
 
   // Render the single profile card
   const avatarBg = profile.photo ? `url(${profile.photo})` : '';
@@ -2075,14 +1887,34 @@ function renderSettings(){
   }
 
   renderVehicleSettings();
-
-  // IVA rate field
-  const ivaEl = document.getElementById('ivaRate');
-  if(ivaEl) ivaEl.value = profile.ivaRate || '';
 }
 
 function renderVehicleSettings(){
-  // Veículo section removed from UI — kept as stub for backward compat
+  ensureVehicleDefaults();
+  const v = profile.vehicle;
+  document.querySelectorAll('#vehicleTypeSeg .seg-opt').forEach(el => el.classList.toggle('active', el.dataset.t === v.type));
+  document.getElementById('vehicleFuelFields').style.display = (v.type === 'combustao') ? 'block' : 'none';
+  const fuel = FUEL_TYPES.find(f => f.key === v.fuelType) || FUEL_TYPES[0];
+  const fuelSelect = document.getElementById('vehicleFuelType');
+  fuelSelect.innerHTML = FUEL_TYPES.map(f => `<option value="${f.key}">${f.label}</option>`).join('');
+  fuelSelect.value = v.fuelType || 'gasolina';
+  document.getElementById('vehiclePriceLabel').textContent = v.type === 'eletrico' ? 'Preço da energia (€/kWh)' : `Preço do combustível (€/litro)`;
+  document.getElementById('vehiclePrice').value = v.price || '';
+
+  // Auto-calculated consumption display
+  const calcConsumption = autoCalculatedConsumption();
+  const displayEl = document.getElementById('vehicleConsumptionDisplay');
+  if(calcConsumption !== null){
+    displayEl.style.display = 'block';
+    const unit = v.type === 'eletrico' ? 'km/kWh' : fuel.unit;
+    document.getElementById('vehicleConsumptionLabel').textContent = `Consumo médio (${unit}) — calculado`;
+    document.getElementById('vehicleConsumptionCalc').textContent = calcConsumption.toFixed(2) + ' ' + unit;
+  } else {
+    displayEl.style.display = 'none';
+  }
+
+  // IVA
+  document.getElementById('ivaRate').value = profile.ivaRate || '';
 }
 function updateIvaRate(value){
   profile.ivaRate = parseFloat(value) || 0;
@@ -2210,64 +2042,17 @@ function syncAllAvatars(){
 }
 
 
-// ── Sync helpers ────────────────────────────────────────────────
-
-function unlockSyncUrl(){
-  document.getElementById('syncUrlLockedView').style.display = 'none';
-  document.getElementById('syncUrlEditView').style.display   = 'block';
-  const input = document.getElementById('syncUrl');
-  if(input){ input.value = syncUrl || ''; input.focus(); }
-}
-function lockSyncUrl(){
-  const input = document.getElementById('syncUrl');
-  if(input) syncUrl = input.value.trim();
-  saveSyncUrl();
-  renderSyncUrlUI();
-}
-function renderSyncUrlUI(){
-  const locked = document.getElementById('syncUrlLockedView');
-  const edit   = document.getElementById('syncUrlEditView');
-  const masked = document.getElementById('syncUrlMasked');
-  if(!locked || !edit) return;
-  if(syncUrl){
-    locked.style.display = 'flex';
-    edit.style.display   = 'none';
-    if(masked) masked.textContent = syncUrl.length > 50 ? syncUrl.slice(0,30) + '…' + syncUrl.slice(-15) : syncUrl;
-  } else {
-    locked.style.display = 'none';
-    edit.style.display   = 'block';
-  }
-}
-
 // Saves the Google Sheets sync URL LOCALLY ONLY (localStorage). This value
 // is never part of the JSON payload sent to the cloud.
 let syncUrlSaveTimer = null;
 function saveSyncUrl(){
-  const input = document.getElementById('syncUrl');
-  if(input) syncUrl = input.value.trim();
+  syncUrl = document.getElementById('syncUrl').value.trim();
   clearTimeout(syncUrlSaveTimer);
   syncUrlSaveTimer = setTimeout(async () => {
     try{ await window.storage.set('syncUrl', syncUrl); }catch(e){}
     setSyncStatus(syncUrl ? 'synced' : 'nolink');
-    showToast(syncUrl ? '🔗 URL guardada' : 'Sincronização desativada');
+    showToast(syncUrl ? 'URL de sincronização salva' : 'Sincronização com a nuvem desativada');
   }, 500);
-}
-async function importFromJson(){
-  const raw = (document.getElementById('importJsonInput')?.value || '').trim();
-  if(!raw){ showToast('Cole o JSON antes de importar'); return; }
-  let data;
-  try{ data = JSON.parse(raw); }
-  catch(e){ showToast('❌ JSON inválido — verifique o texto colado'); return; }
-  if(!data || typeof data !== 'object' || (!data.bills && !data.monthData)){
-    showToast('❌ Formato não reconhecido'); return;
-  }
-  applyCloudData(data);
-  await persistLocalOnlySilently();
-  showToast('✅ Dados importados com sucesso!');
-  const el = document.getElementById('importJsonInput');
-  if(el){ el.value = ''; el.style.borderColor = 'var(--vault-light)'; }
-  renderGanhos();
-  renderSettings();
 }
 async function confirmResetAll(){
   if(!confirm('Isso vai apagar TODOS os dados. Tem certeza?')) return;
@@ -2312,7 +2097,7 @@ function groupedBarSVG(labels, series){
       bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${Math.max(0,barH).toFixed(1)}" rx="3" fill="${s.color}"></rect>`;
     });
     const labelX = groupX + groupWidth / 2;
-    bars += `<text x="${labelX.toFixed(1)}" y="${h - 6}" font-size="9" text-anchor="middle" class="chart-text">${escapeHtml(label)}</text>`;
+    bars += `<text x="${labelX.toFixed(1)}" y="${h - 6}" font-size="9" text-anchor="middle" class="chart-text" fill="rgba(42,36,32,0.5)">${escapeHtml(label)}</text>`;
   });
   const legend = series.map(s => `<div class="chart-legend-item"><span class="chart-legend-dot" style="background:${s.color};"></span>${escapeHtml(s.name)}</div>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">${bars}</svg><div class="chart-legend">${legend}</div>`;
@@ -2385,38 +2170,6 @@ function ivaAmount(grossEarnings){
 function ivaRate(){
   return parseFloat(profile.ivaRate) || 0;
 }
-
-// Returns only the Uber+Bolt gross (subject to IVA) for a list of earnings
-function ganhosAppsAmount(items){
-  return items.filter(e => e.platform === 'uber' || e.platform === 'bolt').reduce((s,e)=>s+(e.amount||0),0);
-}
-// Returns Particular+Outros gross (NOT subject to IVA or 10%)
-function ganhosParticularsAmount(items){
-  return items.filter(e => e.platform === 'particular' || e.platform === 'outros').reduce((s,e)=>s+(e.amount||0),0);
-}
-// Returns combustível expense total from a list of variable expenses
-function combustivelAmount(expenses){
-  return expenses.filter(e => e.category === 'combustivel').reduce((s,e)=>s+(e.amount||0),0);
-}
-
-// Computes the "líquido" for an earnings+expenses context:
-// líquido = (uber+bolt - combustível - IVA) + particular + outros
-function computeLiquido(items, expenses){
-  const apps = ganhosAppsAmount(items);
-  const comb = combustivelAmount(expenses);
-  const iva  = ivaAmount(apps);
-  const part = ganhosParticularsAmount(items);
-  return (apps - comb - iva) + part;
-}
-
-// For month-level summaries using entry (includes all variableExpenses)
-function computeLiquidoFromEntry(entry){
-  const apps = entry.earnings.filter(e=>e.platform==='uber'||e.platform==='bolt').reduce((s,e)=>s+(e.amount||0),0);
-  const comb = entry.variableExpenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva  = ivaAmount(apps);
-  const part = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
-  return (apps - comb - iva) + part;
-}
 // Cards shared by the Dia/Semana/Mês stat views: efficiency (R$/km, R$/hora),
 // estimated vs. actual fuel cost (using the vehicle settings from "Você"),
 // and net profit for the period.
@@ -2453,49 +2206,43 @@ function uberMetricsHTML(items, expenses, extraDeduction){
 function renderStatsDay(){
   const dateIso = isoDate(statsRefDate);
   const isToday = dateIso === isoDate(new Date());
-  const [dy,dm,dd] = dateIso.split('-').map(Number);
-  const dateObj = new Date(dy,dm-1,dd);
-  const dayLabel  = isToday ? 'Hoje' : dateObj.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
-  const yearLabel = isToday ? String(dy) : String(dy);
-  document.getElementById('statsLabel').textContent = dayLabel;
-  const yearEl = document.getElementById('statsLabelYear');
-  if(yearEl) yearEl.textContent = yearLabel;
-  const items    = earningsInRange(dateIso, dateIso);
+  document.getElementById('statsLabel').textContent = isToday ? 'Hoje' : `${weekdayLabel(statsRefDate)}, ${dayMonthLabel(statsRefDate)}`;
+  const items = earningsInRange(dateIso, dateIso);
   const expenses = variableExpensesInRange(dateIso, dateIso);
   const box = document.getElementById('statsContent');
   if(items.length === 0 && expenses.length === 0){
     box.innerHTML = '<div class="stats-empty">Nenhum dado neste dia ainda.</div>'; return;
   }
-  const tvde      = items.filter(e=>e.platform==='uber'||e.platform==='bolt');
-  const part      = items.filter(e=>e.platform==='particular'||e.platform==='outros');
-  const brutoTVDE = tvde.reduce((s,e)=>s+(e.amount||0),0);
-  const brutoPart = part.reduce((s,e)=>s+(e.amount||0),0);
-  const comb      = combustivelAmount(expenses);
-  const varOther  = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(brutoTVDE);
-  const ivaVal    = ivaRate();
-  const liquido   = (brutoTVDE - comb - iva) + brutoPart;
-  const lucro     = liquido - varOther;
-  const totalUber = sumByPlatform(items,'uber'), totalBolt = sumByPlatform(items,'bolt');
-  const totalPart = sumByPlatform(items,'particular'), totalOut = sumByPlatform(items,'outros');
+  const bruto = sumAmount(items);
+  const iva   = ivaAmount(bruto);
+  const ivaVal = ivaRate();
+  const liquido = bruto - iva;
+  const totalDespesas = sumAmount(expenses);
+  const lucro = liquido - totalDespesas;
+  const km = sumKm(items), hours = sumHours(items);
+  const totalUber = sumByPlatform(items, 'uber'), totalBolt = sumByPlatform(items, 'bolt');
 
+  // Summary cards — post-IVA values highlighted
   let html = `<div class="stat-cards">
-    ${brutoTVDE>0?`<div class="stat-card"><div class="stat-card-label">🚖 Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>`:''}
-    ${comb>0?`<div class="stat-card"><div class="stat-card-label">⛽ Combustível</div><div class="stat-card-value negative">− ${fmt(comb)}</div></div>`:''}
-    ${ivaVal>0&&brutoTVDE>0?`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`:''}
-    ${brutoPart>0?`<div class="stat-card"><div class="stat-card-label">🚘 Pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>`:''}
-    <div class="stat-card"><div class="stat-card-label">💧 Líquido</div><div class="stat-card-value">${fmt(liquido)}</div></div>
-    ${varOther>0?`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOther)}</div></div>`:''}
+    <div class="stat-card"><div class="stat-card-label">Bruto</div><div class="stat-card-value">${fmt(bruto)}</div></div>`;
+  if(ivaVal > 0) html += `<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Líquido (s/ IVA)</div><div class="stat-card-value">${fmt(liquido)}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-card-label">Despesas variáveis</div><div class="stat-card-value negative">− ${fmt(totalDespesas)}</div></div>
     <div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do dia</div><div class="stat-card-value ${lucro<0?'negative':''}">${fmt(lucro)}</div></div>
   </div>`;
-
-  const breakdownBars = [];
-  if(totalUber>0) breakdownBars.push({label:'Uber', value:totalUber, color:'#0a0a0a'});
-  if(totalBolt>0) breakdownBars.push({label:'Bolt', value:totalBolt, color:'#34D17B'});
-  if(totalPart>0) breakdownBars.push({label:'Particular', value:totalPart, color:'#5A6B8A'});
-  if(totalOut>0)  breakdownBars.push({label:'Outros', value:totalOut, color:'#8A6B5A'});
-  if(breakdownBars.length > 1){
-    html += chartBoxWrap('Por plataforma', 'Faturamento bruto hoje', horizontalBarsHTML(breakdownBars));
+  if(km > 0 || hours > 0){
+    html += `<div class="stat-cards">
+      ${km > 0 ? `<div class="stat-card"><div class="stat-card-label">Km rodados</div><div class="stat-card-value">${km.toFixed(0)} km</div></div>` : ''}
+      ${km > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / km</div><div class="stat-card-value">${fmt(liquido/km)}</div></div>` : ''}
+      ${hours > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / hora</div><div class="stat-card-value">${fmt(liquido/hours)}</div></div>` : ''}
+      ${km > 0 && hours > 0 ? `<div class="stat-card"><div class="stat-card-label">Lucro / km</div><div class="stat-card-value ${lucro/km<0?'negative':''}">${fmt(lucro/km)}</div></div>` : ''}
+    </div>`;
+  }
+  if(totalUber > 0 || totalBolt > 0){
+    html += chartBoxWrap('Uber × Bolt', 'Faturamento bruto por plataforma (hoje)', horizontalBarsHTML([
+      { label:'Uber', value: totalUber, color:'#0a0a0a' },
+      { label:'Bolt', value: totalBolt, color:'#34D17B' }
+    ]));
   }
   box.innerHTML = html;
 }
@@ -2504,146 +2251,99 @@ function renderStatsWeek(){
   const start = startOfWeek(statsRefDate);
   const end   = addDays(start, 6);
   const startIso = isoDate(start), endIso = isoDate(end);
-  const [sy,sm,sd] = startIso.split('-').map(Number);
-  const [ey,em,ed] = endIso.split('-').map(Number);
-  const fmtD = d => new Date(...d).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
-  const yearSuffix = sy !== ey ? `${sy}–${ey}` : String(sy);
-  document.getElementById('statsLabel').textContent = `${fmtD([sy,sm-1,sd])} – ${fmtD([ey,em-1,ed])}`;
-  const yearEl = document.getElementById('statsLabelYear');
-  if(yearEl) yearEl.textContent = yearSuffix;
-  const items    = earningsInRange(startIso, endIso);
+  document.getElementById('statsLabel').textContent = `Semana de ${dayMonthLabel(start)} a ${dayMonthLabel(end)}`;
+  const items = earningsInRange(startIso, endIso);
   const expenses = variableExpensesInRange(startIso, endIso);
   const box = document.getElementById('statsContent');
   if(items.length === 0 && expenses.length === 0){
     box.innerHTML = '<div class="stats-empty">Nenhum dado nesta semana ainda.</div>'; return;
   }
-  const tvde      = items.filter(e=>e.platform==='uber'||e.platform==='bolt');
-  const part      = items.filter(e=>e.platform==='particular'||e.platform==='outros');
-  const brutoTVDE = tvde.reduce((s,e)=>s+(e.amount||0),0);
-  const brutoPart = part.reduce((s,e)=>s+(e.amount||0),0);
-  const comb      = combustivelAmount(expenses);
-  const varOther  = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(brutoTVDE);
-  const ivaVal    = ivaRate();
-  const liquido   = (brutoTVDE - comb - iva) + brutoPart;
-  const lucro     = liquido - varOther;
-  const totalUber = sumByPlatform(items,'uber'), totalBolt = sumByPlatform(items,'bolt');
-  const totalPart = sumByPlatform(items,'particular'), totalOut = sumByPlatform(items,'outros');
+  const bruto = sumAmount(items);
+  const iva   = ivaAmount(bruto);
+  const ivaVal = ivaRate();
+  const liquido = bruto - iva;
+  const totalDespesas = sumAmount(expenses);
+  const lucro = liquido - totalDespesas;
+  const km = sumKm(items), hours = sumHours(items);
+  const totalUber = sumByPlatform(items, 'uber'), totalBolt = sumByPlatform(items, 'bolt');
 
   let html = `<div class="stat-cards">
-    ${brutoTVDE>0?`<div class="stat-card"><div class="stat-card-label">🚖 Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>`:''}
-    ${comb>0?`<div class="stat-card"><div class="stat-card-label">⛽ Combustível</div><div class="stat-card-value negative">− ${fmt(comb)}</div></div>`:''}
-    ${ivaVal>0&&brutoTVDE>0?`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`:''}
-    ${brutoPart>0?`<div class="stat-card"><div class="stat-card-label">🚘 Pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>`:''}
-    <div class="stat-card"><div class="stat-card-label">💧 Líquido</div><div class="stat-card-value">${fmt(liquido)}</div></div>
-    ${varOther>0?`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOther)}</div></div>`:''}
+    <div class="stat-card"><div class="stat-card-label">Bruto</div><div class="stat-card-value">${fmt(bruto)}</div></div>`;
+  if(ivaVal > 0) html += `<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Líquido (s/ IVA)</div><div class="stat-card-value">${fmt(liquido)}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-card-label">Despesas variáveis</div><div class="stat-card-value negative">− ${fmt(totalDespesas)}</div></div>
     <div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro da semana</div><div class="stat-card-value ${lucro<0?'negative':''}">${fmt(lucro)}</div></div>
   </div>`;
+  if(km > 0 || hours > 0){
+    html += `<div class="stat-cards">
+      ${km > 0 ? `<div class="stat-card"><div class="stat-card-label">Km rodados</div><div class="stat-card-value">${km.toFixed(0)} km</div></div>` : ''}
+      ${km > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / km</div><div class="stat-card-value">${fmt(liquido/km)}</div></div>` : ''}
+      ${hours > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / hora</div><div class="stat-card-value">${fmt(liquido/hours)}</div></div>` : ''}
+      ${km > 0 ? `<div class="stat-card"><div class="stat-card-label">Lucro / km</div><div class="stat-card-value ${lucro/km<0?'negative':''}">${fmt(lucro/km)}</div></div>` : ''}
+    </div>`;
+  }
 
-  // Day-by-day chart
+  // Day-by-day chart: líquido vs lucro
   const dayLabels=[], dayLiquido=[], dayLucro=[];
   for(let i=0;i<7;i++){
     const d=addDays(start,i); const dIso=isoDate(d);
-    const dTVDE = items.filter(x=>x.date===dIso&&(x.platform==='uber'||x.platform==='bolt')).reduce((s,x)=>s+(x.amount||0),0);
-    const dPart = items.filter(x=>x.date===dIso&&(x.platform==='particular'||x.platform==='outros')).reduce((s,x)=>s+(x.amount||0),0);
-    const dComb = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-    const dLiq  = (dTVDE - dComb - ivaAmount(dTVDE)) + dPart;
-    const dVar  = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-    dayLabels.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()).toLocaleDateString('pt-BR',{weekday:'narrow'}));
-    dayLiquido.push(Math.max(0, dLiq));
-    dayLucro.push(Math.max(0, dLiq - dVar));
+    const db = sumAmount(items.filter(it=>it.date===dIso));
+    const dv = sumAmount(expenses.filter(e=>(e.date||isoDateFromTs(e.ts))===dIso));
+    const dl = db - ivaAmount(db);
+    dayLabels.push(weekdayLabel(d));
+    dayLiquido.push(Math.max(0, dl));
+    dayLucro.push(Math.max(0, dl - dv));
   }
-  html += chartBoxWrap('Por dia', 'Líquido vs. lucro líquido', groupedBarSVG(dayLabels, [
+  html += chartBoxWrap('Por dia', 'Líquido (s/ IVA) vs. lucro líquido', groupedBarSVG(dayLabels, [
     { name:'Líquido', color:'rgba(31,58,46,0.3)', values: dayLiquido },
-    { name:'Lucro',   color:'#3E6650', values: dayLucro }
+    { name:'Lucro', color:'#3E6650', values: dayLucro }
   ]));
 
-  const breakdownBars = [];
-  if(totalUber>0) breakdownBars.push({label:'Uber', value:totalUber, color:'#0a0a0a'});
-  if(totalBolt>0) breakdownBars.push({label:'Bolt', value:totalBolt, color:'#34D17B'});
-  if(totalPart>0) breakdownBars.push({label:'Particular', value:totalPart, color:'#5A6B8A'});
-  if(totalOut>0)  breakdownBars.push({label:'Outros', value:totalOut, color:'#8A6B5A'});
-  if(breakdownBars.length > 1){
-    html += chartBoxWrap('Por plataforma', 'Faturamento bruto da semana', horizontalBarsHTML(breakdownBars));
+  if(totalUber > 0 || totalBolt > 0){
+    html += chartBoxWrap('Uber × Bolt', 'Faturamento bruto da semana por plataforma', horizontalBarsHTML([
+      { label:'Uber', value: totalUber, color:'#0a0a0a' },
+      { label:'Bolt', value: totalBolt, color:'#34D17B' }
+    ]));
   }
   box.innerHTML = html;
 }
 
 function renderStatsMonth(){
-  const [curY, curM] = currentMonthKey.split('-').map(Number);
-  const monthNameYear = new Date(curY, curM-1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
-  document.getElementById('statsLabelMes').textContent = monthNameYear;
+  document.getElementById('statsLabelMes').textContent = monthLabelFor(currentMonthKey);
   const box = document.getElementById('statsContent');
   const monthKeys = lastNMonthKeys(6);
   const entry = ensureMonthEntry(currentMonthKey);
   const hasAnyData = monthKeys.length > 0 || entry.earnings.length > 0 || entry.variableExpenses.length > 0;
   if(!hasAnyData){
-    box.innerHTML = '<div class="stats-empty">Ainda não há dados suficientes. Use o app por um tempo e volte aqui 📊</div>';
+    box.innerHTML = '<div class="stats-empty">Ainda não há dados suficientes para mostrar estatísticas. Use o app por um tempo e volte aqui 📊</div>';
     return;
   }
 
-  // ---- Separar TVDE (Uber+Bolt) de Pessoal (Particular+Outros) ----
-  const tvdeEarnings  = entry.earnings.filter(e=>e.platform==='uber'||e.platform==='bolt');
-  const partEarnings  = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros');
-  const brutoTVDE     = tvdeEarnings.reduce((s,e)=>s+(e.amount||0),0);
-  const brutoPart     = partEarnings.reduce((s,e)=>s+(e.amount||0),0);
-  const bruto         = brutoTVDE + brutoPart;
-  const combMes       = entry.variableExpenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const varOtherMes   = entry.variableExpenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva           = ivaAmount(brutoTVDE);
-  const ivaVal        = ivaRate();
-  const liquidoTVDE   = brutoTVDE - combMes - iva;
-  const liquido       = liquidoTVDE + brutoPart;
-  const fixasMes      = totalFixedBills(entry);
-  const lucroMes      = liquido - fixasMes - varOtherMes;
-  const totalUber     = totalEarningsByPlatform(entry,'uber');
-  const totalBolt     = totalEarningsByPlatform(entry,'bolt');
-  const totalPart     = totalEarningsByPlatform(entry,'particular');
-  const totalOut      = totalEarningsByPlatform(entry,'outros');
+  const bruto      = totalEarnings(entry);
+  const iva        = ivaAmount(bruto);
+  const ivaVal     = ivaRate();
+  const liquido    = bruto - iva;
+  const fixasMes   = totalFixedBills(entry);
+  const variaveisMes = totalVariableExpenses(entry);
+  const lucroMes   = liquido - fixasMes - variaveisMes;
+  const kmMes      = totalKm(entry);
+  const hoursMes   = entry.earnings.reduce((s,e)=>s+(e.hours||0),0);
 
-  // ---- Bloco TVDE ----
-  let html = `
-  <div class="chart-box" style="margin-bottom:14px;">
-    <div class="chart-box-title">🚖 TVDE — Uber &amp; Bolt</div>
-    <div class="chart-box-sub">${monthNameYear}</div>
-    <div class="stat-cards" style="margin-bottom:0;">
-      <div class="stat-card"><div class="stat-card-label">Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>
-      ${combMes>0?`<div class="stat-card"><div class="stat-card-label">Combustível</div><div class="stat-card-value negative">− ${fmt(combMes)}</div></div>`:''}
-      ${ivaVal>0?`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`:''}
-      <div class="stat-card"><div class="stat-card-label">Líquido TVDE</div><div class="stat-card-value">${fmt(liquidoTVDE)}</div></div>
-      ${totalUber>0?`<div class="stat-card"><div class="stat-card-label">${platformBadge('uber',14)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>`:''}
-      ${totalBolt>0?`<div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',14)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`:''}
-    </div>
+  let html = `<div class="stat-cards">
+    <div class="stat-card"><div class="stat-card-label">Bruto</div><div class="stat-card-value">${fmt(bruto)}</div></div>`;
+  if(ivaVal > 0) html += `<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Líquido (s/ IVA)</div><div class="stat-card-value">${fmt(liquido)}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-card-label">Despesas fixas</div><div class="stat-card-value negative">− ${fmt(fixasMes)}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Despesas variáveis</div><div class="stat-card-value negative">− ${fmt(variaveisMes)}</div></div>
+    <div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do mês</div><div class="stat-card-value ${lucroMes<0?'negative':''}">${fmt(lucroMes)}</div></div>
+    ${kmMes > 0 ? `<div class="stat-card"><div class="stat-card-label">Km rodados</div><div class="stat-card-value">${kmMes.toFixed(0)} km</div></div>` : ''}
+    ${kmMes > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / km</div><div class="stat-card-value">${fmt(liquido/kmMes)}</div></div>` : ''}
+    ${kmMes > 0 ? `<div class="stat-card"><div class="stat-card-label">Lucro / km</div><div class="stat-card-value ${lucroMes/kmMes<0?'negative':''}">${fmt(lucroMes/kmMes)}</div></div>` : ''}
+    ${hoursMes > 0 ? `<div class="stat-card"><div class="stat-card-label">Líquido / hora</div><div class="stat-card-value">${fmt(liquido/hoursMes)}</div></div>` : ''}
+    ${hoursMes > 0 ? `<div class="stat-card"><div class="stat-card-label">Lucro / hora</div><div class="stat-card-value ${lucroMes/hoursMes<0?'negative':''}">${fmt(lucroMes/hoursMes)}</div></div>` : ''}
   </div>`;
 
-  // ---- Bloco Pessoal (só mostra se houver) ----
-  if(brutoPart > 0){
-    html += `
-  <div class="chart-box" style="margin-bottom:14px;">
-    <div class="chart-box-title">🚘 Pessoal — Particular &amp; Outros</div>
-    <div class="chart-box-sub">Sem desconto de IVA · ${monthNameYear}</div>
-    <div class="stat-cards" style="margin-bottom:0;">
-      ${totalPart>0?`<div class="stat-card"><div class="stat-card-label">Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`:''}
-      ${totalOut>0?`<div class="stat-card"><div class="stat-card-label">Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`:''}
-      <div class="stat-card"><div class="stat-card-label">Total pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>
-    </div>
-  </div>`;
-  }
-
-  // ---- Resumo geral ----
-  html += `
-  <div class="chart-box" style="margin-bottom:14px;">
-    <div class="chart-box-title">📊 Resumo do mês</div>
-    <div class="chart-box-sub">${monthNameYear}</div>
-    <div class="stat-cards" style="margin-bottom:0;">
-      <div class="stat-card"><div class="stat-card-label">💧 Líquido total</div><div class="stat-card-value">${fmt(liquido)}</div></div>
-      <div class="stat-card"><div class="stat-card-label">Despesas fixas</div><div class="stat-card-value negative">− ${fmt(fixasMes)}</div></div>
-      ${varOtherMes>0?`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOtherMes)}</div></div>`:''}
-      <div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do mês</div><div class="stat-card-value ${lucroMes<0?'negative':''}">${fmt(lucroMes)}</div></div>
-    </div>
-  </div>`;
-
-  // ---- Gráfico por semana ----
+  // Per-week breakdown: bruto vs lucro
   const nWeeks = weeksInMonth(currentMonthKey);
   const weekGanhos = Array(nWeeks).fill(0);
   const weekDespesas = Array(nWeeks).fill(0);
@@ -2654,10 +2354,10 @@ function renderStatsMonth(){
     if(weekDespesas[w]!==undefined) weekDespesas[w] += (e.amount||0);
   });
   const fixasPorSemana = fixasMes / nWeeks;
-  const weekLabels  = Array.from({length:nWeeks}, (_,i) => `Sem. ${i+1}`);
-  const weekLucro   = weekGanhos.map((b,i) => Math.max(0, b - ivaAmount(b) - fixasPorSemana - weekDespesas[i]));
+  const weekLabels = Array.from({length:nWeeks}, (_,i) => `Sem. ${i+1}`);
+  const weekLucro  = weekGanhos.map((b,i) => Math.max(0, b - ivaAmount(b) - fixasPorSemana - weekDespesas[i]));
   const weekLiquido = weekGanhos.map(b => Math.max(0, b - ivaAmount(b)));
-  html += chartBoxWrap('Por semana', 'Líquido vs. lucro líquido por semana', groupedBarSVG(
+  html += chartBoxWrap('Por semana', 'Líquido (s/ IVA) vs. lucro líquido por semana', groupedBarSVG(
     weekLabels,
     [
       { name:'Líquido', color:'rgba(31,58,46,0.3)', values: weekLiquido },
@@ -2665,33 +2365,29 @@ function renderStatsMonth(){
     ]
   ));
 
-  // ---- Últimos meses (com ano) ----
+  // Uber x Bolt
+  const totalUber = totalEarningsByPlatform(entry, 'uber');
+  const totalBolt = totalEarningsByPlatform(entry, 'bolt');
+  if(totalUber > 0 || totalBolt > 0){
+    html += chartBoxWrap('Uber × Bolt', 'Faturamento bruto por plataforma (mês)', horizontalBarsHTML([
+      { label:'Uber', value: totalUber, color:'#0a0a0a' },
+      { label:'Bolt', value: totalBolt, color:'#34D17B' }
+    ]));
+  }
+
+  // Last 6 months: liquido vs lucro
   if(monthKeys.length){
     const liquidoVals = monthKeys.map(k => {
-      const e = ensureMonthEntry(k);
-      const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
-      const part = e.earnings.filter(x=>x.platform==='particular'||x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
-      const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      return Math.max(0, (apps - comb - ivaAmount(apps)) + part);
+      const b = totalEarnings(ensureMonthEntry(k));
+      return Math.max(0, b - ivaAmount(b));
     });
     const lucroVals = monthKeys.map(k => {
       const e = ensureMonthEntry(k);
-      const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
-      const part = e.earnings.filter(x=>x.platform==='particular'||x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
-      const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      const liq  = (apps - comb - ivaAmount(apps)) + part;
-      return Math.max(0, liq - totalFixedBills(e) - varO);
+      const b = totalEarnings(e);
+      return Math.max(0, b - ivaAmount(b) - totalFixedBills(e) - totalVariableExpenses(e));
     });
-    // Labels with year if different years present
-    const years = new Set(monthKeys.map(k=>k.split('-')[0]));
-    const mLabels = monthKeys.map(k => {
-      const [y,m] = k.split('-').map(Number);
-      const shortMonth = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
-      return years.size > 1 ? `${shortMonth} ${String(y).slice(2)}` : shortMonth;
-    });
-    html += chartBoxWrap('Evolução — últimos meses', 'Líquido vs. lucro mês a mês', groupedBarSVG(
-      mLabels,
+    html += chartBoxWrap('Últimos meses', 'Líquido (s/ IVA) vs. lucro líquido, mês a mês', groupedBarSVG(
+      monthKeys.map(monthShortLabel),
       [
         { name:'Líquido', color:'rgba(31,58,46,0.3)', values: liquidoVals },
         { name:'Lucro',   color:'#3E6650', values: lucroVals }
@@ -2699,19 +2395,18 @@ function renderStatsMonth(){
     ));
   }
 
-  // ---- Despesas por categoria ----
+  // Variable expenses by category
   const categoryTotals = {};
   monthKeys.forEach(k => {
     const e = ensureMonthEntry(k);
     e.variableExpenses.forEach(exp => { categoryTotals[exp.category] = (categoryTotals[exp.category]||0) + (exp.amount||0); });
   });
-  entry.variableExpenses.forEach(exp => { categoryTotals[exp.category] = (categoryTotals[exp.category]||0) + (exp.amount||0); });
   const categoryItems = Object.entries(categoryTotals).filter(([,v])=>v>0).map(([cat,val]) => {
     const found = EXPENSE_CATEGORIES.find(c => c.key === cat);
     return { label: found ? `${found.emoji} ${found.label}` : cat, value: val, color:'#C97259' };
   });
   if(categoryItems.length){
-    html += chartBoxWrap('Despesas por categoria', 'Totais acumulados', horizontalBarsHTML(categoryItems));
+    html += chartBoxWrap('Despesas por categoria', 'Últimos 6 meses', horizontalBarsHTML(categoryItems));
   }
 
   box.innerHTML = html;
@@ -2801,11 +2496,7 @@ function lucroLineHTML(label, value, isDeduction, bg, isBig){
 function renderLucroDay(){
   const dateIso = isoDate(lucroRefDate);
   const isToday = dateIso === isoDate(new Date());
-  const [dy,dm,dd] = dateIso.split('-').map(Number);
-  const dateObj = new Date(dy,dm-1,dd);
-  document.getElementById('lucroLabel').textContent = isToday ? 'Hoje' : dateObj.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
-  const yearEl = document.getElementById('lucroLabelYear');
-  if(yearEl) yearEl.textContent = String(dy);
+  document.getElementById('lucroLabel').textContent = isToday ? 'Hoje' : `${weekdayLabel(lucroRefDate)}, ${dayMonthLabel(lucroRefDate)}`;
   const items    = earningsInRange(dateIso, dateIso);
   const expenses = variableExpensesInRange(dateIso, dateIso);
   const box = document.getElementById('lucroContent');
@@ -2832,12 +2523,7 @@ function renderLucroWeek(){
   const start   = startOfWeek(lucroRefDate);
   const end     = addDays(start, 6);
   const startIso = isoDate(start), endIso = isoDate(end);
-  const [sy,sm,sd] = startIso.split('-').map(Number);
-  const [ey,em,ed] = endIso.split('-').map(Number);
-  const fmtD = ([y,m,d]) => new Date(y,m-1,d).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
-  document.getElementById('lucroLabel').textContent = `${fmtD([sy,sm,sd])} – ${fmtD([ey,em,ed])}`;
-  const yearEl = document.getElementById('lucroLabelYear');
-  if(yearEl) yearEl.textContent = sy !== ey ? `${sy}–${ey}` : String(sy);
+  document.getElementById('lucroLabel').textContent = `${dayMonthLabel(start)} – ${dayMonthLabel(end)}`;
   const items    = earningsInRange(startIso, endIso);
   const expenses = variableExpensesInRange(startIso, endIso);
   const box      = document.getElementById('lucroContent');
@@ -2867,9 +2553,7 @@ function renderLucroWeek(){
 }
 
 function renderLucroMonth(){
-  const [curY, curM] = currentMonthKey.split('-').map(Number);
-  const monthNameYear = new Date(curY, curM-1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
-  document.getElementById('lucroLabelMes').textContent = monthNameYear;
+  document.getElementById('lucroLabelMes').textContent = monthLabelFor(currentMonthKey);
   const box   = document.getElementById('lucroContent');
   const entry = ensureMonthEntry(currentMonthKey);
   const bruto = totalEarnings(entry);
@@ -2989,20 +2673,9 @@ function platformBadge(platform, size){
   if(platform === 'uber'){
     return `<div class="platform-badge uber" style="width:${size}px;height:${size}px;font-size:${size*0.55}px;">U</div>`;
   }
-  if(platform === 'bolt'){
-    return `<div class="platform-badge bolt" style="width:${size}px;height:${size}px;font-size:${size*0.6}px;">⚡</div>`;
-  }
-  if(platform === 'particular'){
-    return `<div class="platform-badge" style="width:${size}px;height:${size}px;font-size:${size*0.55}px;background:#5A6B8A;color:#fff;">P</div>`;
-  }
-  return `<div class="platform-badge" style="width:${size}px;height:${size}px;font-size:${size*0.55}px;background:#8A6B5A;color:#fff;">O</div>`;
+  return `<div class="platform-badge bolt" style="width:${size}px;height:${size}px;font-size:${size*0.6}px;">⚡</div>`;
 }
-function platformLabel(platform){
-  if(platform === 'uber') return 'Uber';
-  if(platform === 'bolt') return 'Bolt';
-  if(platform === 'particular') return 'Particular';
-  return 'Outros';
-}
+function platformLabel(platform){ return platform === 'uber' ? 'Uber' : 'Bolt'; }
 function weekdayLabel(d){ return d.toLocaleDateString('pt-BR', { weekday:'short' }).replace('.',''); }
 function dayMonthLabel(d){ return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).replace('.',''); }
 
@@ -3031,36 +2704,31 @@ function renderEarningsList(items, emptyMsg){
       <div class="bill-delete" onclick="removeEarning('${it.id}')">✕</div>
     </div>`).join('');
 }
-function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
+function renderEarningsCardsAndSummary(items, fixedTotal, variableTotal){
+  const total = sumAmount(items);
   const totalUber = sumByPlatform(items, 'uber');
   const totalBolt = sumByPlatform(items, 'bolt');
-  const totalPart = sumByPlatform(items, 'particular');
-  const totalOut  = sumByPlatform(items, 'outros');
-  const apps      = totalUber + totalBolt;
-  const part      = totalPart + totalOut;
-  const comb      = (expenses && Array.isArray(expenses)) ? combustivelAmount(expenses) : (typeof expenses === 'number' ? 0 : 0);
-  const varOther  = (expenses && Array.isArray(expenses)) ? expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0) : 0;
-  const iva       = ivaAmount(apps);
-  const ivaRateVal = ivaRate();
-  const liquido   = (apps - comb - iva) + part;
-  const saldo     = liquido - fixedTotal - varOther;
-
-  let cardsHtml = `
+  const km = sumKm(items);
+  const hours = sumHours(items);
+  document.getElementById('earningsPlatformCards').innerHTML = `
     <div class="stat-card"><div class="stat-card-label">${platformBadge('uber',16)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>
     <div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',16)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`;
-  if(totalPart > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">🚘 Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`;
-  if(totalOut  > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">📦 Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`;
-  document.getElementById('earningsPlatformCards').innerHTML = cardsHtml;
-  document.getElementById('earningsKmHint').textContent = '';
-
-  let summaryHtml = `<div class="ms-row" style="opacity:0.85;"><div class="ms-label">Faturamento bruto (apps)</div><div class="ms-value">${fmt(apps)}</div></div>`;
-  if(comb > 0) summaryHtml += `<div class="ms-row"><div class="ms-label">Combustível</div><div class="ms-value">− ${fmt(comb)}</div></div>`;
-  if(ivaRateVal > 0) summaryHtml += `<div class="ms-row"><div class="ms-label">IVA (${ivaRateVal}%)</div><div class="ms-value">− ${fmt(iva)}</div></div>`;
-  if(part > 0) summaryHtml += `<div class="ms-row"><div class="ms-label">Particular / Outros</div><div class="ms-value">+ ${fmt(part)}</div></div>`;
-  summaryHtml += `<div class="ms-row" style="border-top:1px solid rgba(255,255,255,0.12);padding-top:10px;margin-top:4px;"><div class="ms-label">Líquido</div><div class="ms-value">${fmt(liquido)}</div></div>`;
+  const bits = [];
+  if(km > 0) bits.push(`${km.toFixed(0)} km`);
+  if(hours > 0) bits.push(`${hours.toFixed(1)}h`);
+  if(km > 0 && hours > 0) bits.push(`${fmt(total/hours)}/h`);
+  document.getElementById('earningsKmHint').textContent = bits.join(' · ');
+  const iva = ivaAmount(total);
+  const ivaRateVal = ivaRate();
+  const saldo = total - iva - fixedTotal - variableTotal;
+  let summaryHtml = `<div class="ms-row" style="opacity:0.85;"><div class="ms-label">Faturamento bruto</div><div class="ms-value">${fmt(total)}</div></div>`;
+  if(ivaRateVal > 0){
+    summaryHtml += `<div class="ms-row"><div class="ms-label">IVA (${ivaRateVal}%)</div><div class="ms-value">− ${fmt(iva)}</div></div>`;
+    summaryHtml += `<div class="ms-row" style="border-top:1px solid rgba(255,255,255,0.12);padding-top:10px;margin-top:4px;"><div class="ms-label">Faturamento líquido</div><div class="ms-value">${fmt(total - iva)}</div></div>`;
+  }
   summaryHtml += `
     <div class="ms-row"><div class="ms-label">Despesas fixas</div><div class="ms-value">− ${fmt(fixedTotal)}</div></div>
-    <div class="ms-row"><div class="ms-label">Outras despesas variáveis</div><div class="ms-value">− ${fmt(varOther)}</div></div>
+    <div class="ms-row"><div class="ms-label">Despesas variáveis</div><div class="ms-value">− ${fmt(variableTotal)}</div></div>
     <div class="ms-row ms-final ${saldo>=0?'positive':'negative'}">
       <div class="ms-label ms-final-label">${saldo>=0?'💰 Lucro líquido':'⚠️ Faltou'}</div>
       <div class="ms-value">${fmt(Math.abs(saldo))}</div>
@@ -3081,7 +2749,7 @@ function renderGanhosDay(){
   document.getElementById('incomeSection').innerHTML = renderEarningsList(items, 'Nenhum ganho neste dia.') +
     `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho do dia</div>`;
   const fixedTotal = 0; // bills are monthly, don't apply to a single-day view
-  renderEarningsCardsAndSummary(items, fixedTotal, variableExpensesInRange(dateIso, dateIso));
+  renderEarningsCardsAndSummary(items, fixedTotal, sumAmount(variableExpensesInRange(dateIso, dateIso)));
 }
 function renderGanhosWeek(){
   const start = startOfWeek(ganhosRefDate);
@@ -3107,7 +2775,7 @@ function renderGanhosWeek(){
   }
   document.getElementById('incomeSection').innerHTML = dayRows +
     `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho da semana</div>`;
-  renderEarningsCardsAndSummary(items, 0, variableExpensesInRange(startIso, endIso));
+  renderEarningsCardsAndSummary(items, 0, sumAmount(variableExpensesInRange(startIso, endIso)));
 }
 function toggleGanhosEmptyState(hasItems){
   document.getElementById('noIncomeState').style.display = hasItems ? 'none' : 'block';
@@ -3125,7 +2793,7 @@ function renderGanhosMonth(){
   if(items.length === 0) return;
   document.getElementById('incomeSection').innerHTML = renderEarningsList(items, 'Nenhum ganho registrado.') +
     `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho do mês</div>`;
-  renderEarningsCardsAndSummary(items, totalFixedBills(entry), entry.variableExpenses);
+  renderEarningsCardsAndSummary(items, totalFixedBills(entry), totalVariableExpenses(entry));
 }
 
 function renderGanhos(){
@@ -3139,47 +2807,40 @@ function openAddIncomeSheet(){
   let defaultDate, sheetSub;
   if(ganhosView === 'dia'){
     defaultDate = isoDate(ganhosRefDate);
-    sheetSub = 'Registe todos os ganhos do dia de uma vez.';
+    sheetSub = 'Se o turno passou da meia-noite, use o dia em que você <b>começou</b> a trabalhar.';
   } else if(ganhosView === 'semana'){
+    // Default to today if today is in the current week, otherwise first day of the viewed week
     const wStart = startOfWeek(ganhosRefDate);
     const wEnd   = addDays(wStart, 6);
     const todayIso = isoDate(new Date());
     defaultDate = (todayIso >= isoDate(wStart) && todayIso <= isoDate(wEnd)) ? todayIso : isoDate(wStart);
-    sheetSub = 'Escolha o dia desta semana e registe os ganhos.';
+    sheetSub = 'Escolha o dia desta semana em que você trabalhou.';
   } else {
+    // Mês — default to today if in current month, else last day of viewed month
+    const [y, m] = currentMonthKey.split('-').map(Number);
     const todayIso = isoDate(new Date());
     const monthPrefix = currentMonthKey + '-';
     defaultDate = todayIso.startsWith(monthPrefix) ? todayIso : `${currentMonthKey}-01`;
-    sheetSub = 'Escolha o dia deste mês e registe os ganhos.';
+    sheetSub = 'Escolha o dia deste mês em que você trabalhou.';
   }
   openSheet(`
     <div class="sheet-handle"></div>
     <div class="sheet-title">Novo ganho</div>
     <div class="sheet-sub">${sheetSub}</div>
     <div class="field"><label>Dia do turno</label><input type="date" id="incDate" value="${defaultDate}" /></div>
-    <div style="margin-bottom:10px;">
-      <div class="section-sub" style="margin-bottom:8px;font-weight:700;">Uber</div>
-      <div class="field-money"><input type="number" id="incUber" placeholder="0,00" inputmode="decimal"></div>
-      <div class="section-sub" style="font-size:11px;margin-top:4px;">IVA aplicado automaticamente. Combustível descontado nas Despesas.</div>
+    <div class="field">
+      <label>Plataforma</label>
+      <div class="platform-pick" id="platformPick">
+        <div class="platform-pick-opt active" data-p="uber" onclick="pickPlatform('uber')">${platformBadge('uber',26)} Uber</div>
+        <div class="platform-pick-opt" data-p="bolt" onclick="pickPlatform('bolt')">${platformBadge('bolt',26)} Bolt</div>
+      </div>
     </div>
-    <div style="margin-bottom:10px;">
-      <div class="section-sub" style="margin-bottom:8px;font-weight:700;">Bolt</div>
-      <div class="field-money"><input type="number" id="incBolt" placeholder="0,00" inputmode="decimal"></div>
-      <div class="section-sub" style="font-size:11px;margin-top:4px;">IVA aplicado automaticamente. Combustível descontado nas Despesas.</div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <div class="section-sub" style="margin-bottom:8px;font-weight:700;">🚘 Particular</div>
-      <div class="field-money"><input type="number" id="incParticular" placeholder="0,00" inputmode="decimal"></div>
-      <div class="section-sub" style="font-size:11px;margin-top:4px;">Sem desconto de IVA.</div>
-    </div>
-    <div style="margin-bottom:16px;">
-      <div class="section-sub" style="margin-bottom:8px;font-weight:700;">📦 Outros</div>
-      <div class="field-money"><input type="number" id="incOutros" placeholder="0,00" inputmode="decimal"></div>
-      <div class="section-sub" style="font-size:11px;margin-top:4px;">Sem desconto de IVA.</div>
-    </div>
-    <button class="btn btn-primary" onclick="confirmAddIncome()">Salvar ganhos</button>
-    <button class="btn btn-ghost" onclick="closeSheet()">Cancelar</button>
+    <div class="field"><label>Valor ganho</label><div class="field-money"><input type="number" id="incAmount" placeholder="0,00" inputmode="decimal"></div></div>
+    <div class="field"><label>Km rodados (opcional)</label><input type="number" id="incKm" placeholder="0" inputmode="decimal"></div>
+    <div class="field"><label>Horas trabalhadas no turno (opcional)</label><input type="number" id="incHours" placeholder="0" inputmode="decimal" step="0.5"></div>
+    <button class="btn btn-primary" onclick="confirmAddIncome()">Salvar ganho</button>
   `);
+  window._pendingPlatform = 'uber';
 }
 function pickPlatform(p){
   window._pendingPlatform = p;
@@ -3187,20 +2848,15 @@ function pickPlatform(p){
 }
 async function confirmAddIncome(){
   const date = document.getElementById('incDate').value;
+  const amt  = parseFloat(document.getElementById('incAmount').value);
+  const km   = parseFloat(document.getElementById('incKm').value) || 0;
+  const hours = parseFloat(document.getElementById('incHours').value) || 0;
+  const platform = window._pendingPlatform || 'uber';
   if(!date){ showToast('Selecione a data'); return; }
-  const uberAmt   = parseFloat(document.getElementById('incUber').value) || 0;
-  const boltAmt   = parseFloat(document.getElementById('incBolt').value) || 0;
-  const partAmt   = parseFloat(document.getElementById('incParticular').value) || 0;
-  const outrosAmt = parseFloat(document.getElementById('incOutros').value) || 0;
-  if(uberAmt === 0 && boltAmt === 0 && partAmt === 0 && outrosAmt === 0){
-    showToast('Insira pelo menos um valor'); return;
-  }
+  if(!amt || amt <= 0){ showToast('Valor inválido'); return; }
   const monthKeyOfDate = date.slice(0,7);
   const entry = ensureMonthEntry(monthKeyOfDate);
-  if(uberAmt > 0)   entry.earnings.push({ id: uid(), date, platform:'uber',       amount: uberAmt,   km:0, hours:0, ts: Date.now() });
-  if(boltAmt > 0)   entry.earnings.push({ id: uid(), date, platform:'bolt',       amount: boltAmt,   km:0, hours:0, ts: Date.now()+1 });
-  if(partAmt > 0)   entry.earnings.push({ id: uid(), date, platform:'particular', amount: partAmt,   km:0, hours:0, noIva:true, ts: Date.now()+2 });
-  if(outrosAmt > 0) entry.earnings.push({ id: uid(), date, platform:'outros',     amount: outrosAmt, km:0, hours:0, noIva:true, ts: Date.now()+3 });
+  entry.earnings.push({ id: uid(), date, platform, amount: amt, km, hours, ts: Date.now() });
   await persistMonthData(); closeSheet(); renderGanhos();
 }
 async function removeEarning(id){
@@ -3333,23 +2989,12 @@ async function updateBillAmount(billId, value){
 }
 async function deleteBill(billId){
   const b = bills.find(x=>x.id===billId);
-  if(!b) return;
-  const confirmMsg = `Remover permanentemente "${b.name}"?\n\nIsso vai apagar esta despesa fixa de TODOS os meses.`;
-  if(!confirm(confirmMsg)) return;
-  // Remove from global bills array — true deletion, not just hiding
-  bills = bills.filter(x => x.id !== billId);
-  // Also clean up any per-month overrides/paid/hidden refs to keep data tidy
-  Object.keys(monthData).forEach(k => {
-    const e = monthData[k];
-    if(!e) return;
-    delete e.billOverrides[billId];
-    delete e.billsPaid[billId];
-    delete e.hiddenBills[billId];
-  });
-  await persistBills();
-  await persistMonthData();
-  showToast('Despesa fixa removida');
-  renderDespesas();
+  if(!b || !confirm(`Remover esta conta deste mês: "${b.name}"?`)) return;
+  const entry = ensureMonthEntry(currentMonthKey);
+  entry.hiddenBills[billId] = true;
+  delete entry.billsPaid[billId];
+  delete entry.billOverrides[billId];
+  await persistMonthData(); renderDespesas();
 }
 
 function openNewBillSheet(){
@@ -3432,32 +3077,21 @@ function totalFixedBills(entry){
 }
 
 function renderMonthSummary(entry){
-  const apps      = entry.earnings.filter(e=>e.platform==='uber'||e.platform==='bolt').reduce((s,e)=>s+(e.amount||0),0);
-  const part      = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
-  const ganhos    = apps + part;
-  const comb      = entry.variableExpenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(apps);
+  const ganhos    = totalEarnings(entry);
   const fixas     = totalFixedBills(entry);
-  // variáveis sem combustível (o combustível já foi deduzido do bruto apps)
-  const varOther  = entry.variableExpenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const liquido   = (apps - comb - iva) + part;
-  const lucro     = liquido - fixas - varOther;
+  const variaveis = totalVariableExpenses(entry);
+  const iva       = ivaAmount(ganhos);
+  const lucro     = ganhos - iva - fixas - variaveis;
   const ivaRateVal = ivaRate();
   let html = `
-    <div class="ms-row" style="opacity:0.85;"><div class="ms-label">Faturamento bruto (apps)</div><div class="ms-value">${fmt(apps)}</div></div>`;
-  if(comb > 0){
-    html += `<div class="ms-row"><div class="ms-label">Combustível</div><div class="ms-value">− ${fmt(comb)}</div></div>`;
-  }
+    <div class="ms-row" style="opacity:0.85;"><div class="ms-label">Faturamento bruto</div><div class="ms-value">${fmt(ganhos)}</div></div>`;
   if(ivaRateVal > 0){
     html += `<div class="ms-row"><div class="ms-label">IVA (${ivaRateVal}%)</div><div class="ms-value">− ${fmt(iva)}</div></div>`;
+    html += `<div class="ms-row" style="border-top:1px solid rgba(255,255,255,0.12);padding-top:10px;margin-top:4px;"><div class="ms-label">Faturamento líquido</div><div class="ms-value">${fmt(ganhos - iva)}</div></div>`;
   }
-  if(part > 0){
-    html += `<div class="ms-row"><div class="ms-label">Particular / Outros</div><div class="ms-value">+ ${fmt(part)}</div></div>`;
-  }
-  html += `<div class="ms-row" style="border-top:1px solid rgba(255,255,255,0.12);padding-top:10px;margin-top:4px;"><div class="ms-label">Líquido</div><div class="ms-value">${fmt(liquido)}</div></div>`;
   html += `
     <div class="ms-row"><div class="ms-label">Despesas fixas</div><div class="ms-value">− ${fmt(fixas)}</div></div>
-    <div class="ms-row"><div class="ms-label">Outras despesas variáveis</div><div class="ms-value">− ${fmt(varOther)}</div></div>
+    <div class="ms-row"><div class="ms-label">Despesas variáveis</div><div class="ms-value">− ${fmt(variaveis)}</div></div>
     <div class="ms-row ms-final ${lucro>=0?'positive':'negative'}">
       <div class="ms-label ms-final-label">${lucro>=0?'💰 Lucro líquido':'⚠️ Faltou'}</div>
       <div class="ms-value">${fmt(Math.abs(lucro))}</div>
