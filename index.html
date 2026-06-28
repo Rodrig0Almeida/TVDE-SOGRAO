@@ -1201,7 +1201,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 
 <div class="app" id="app">
 
-  <div class="screen active" id="screen-ganhos">
+  <div class="screen" id="screen-ganhos">
     <div class="topbar">
       <div class="screen-title-group">
         <div class="screen-icon">
@@ -1216,12 +1216,12 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     </div>
 
     <div class="seg" id="ganhosViewSeg" style="margin-bottom:14px;">
-      <div class="seg-opt active" data-v="dia" onclick="setGanhosView('dia')">Dia</div>
+      <div class="seg-opt" data-v="dia" onclick="setGanhosView('dia')">Dia</div>
       <div class="seg-opt" data-v="semana" onclick="setGanhosView('semana')">Semana</div>
-      <div class="seg-opt" data-v="mes" onclick="setGanhosView('mes')">Mês</div>
+      <div class="seg-opt active" data-v="mes" onclick="setGanhosView('mes')">Mês</div>
     </div>
 
-    <div class="month-nav" id="ganhosDayWeekNav" style="display:flex;">
+    <div class="month-nav" id="ganhosDayWeekNav" style="display:none;">
       <div class="month-nav-btn" onclick="changeGanhosDayWeek(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1234,7 +1234,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       </div>
     </div>
 
-    <div class="month-nav" id="ganhosMonthNav" style="display:none;">
+    <div class="month-nav" id="ganhosMonthNav" style="display:flex;">
       <div class="month-nav-btn" onclick="changeMonth(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1378,12 +1378,32 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 
     <button class="delete-all-btn" onclick="confirmResetAll()">Apagar todos os dados</button>
 
-    <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
-    <div class="section-sub" style="margin-bottom:10px;">Se a sincronização automática não funcionar, cole aqui o JSON copiado do Google Sheets para importar os seus dados.</div>
-    <textarea id="importJsonInput" placeholder='Cole o JSON aqui… {"bills":[…],"monthData":{…},"profile":{…}}' style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:12px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--ink);resize:vertical;" oninput="this.style.borderColor=''"></textarea>
-    <button onclick="importFromJson()" style="width:100%;margin-top:8px;padding:13px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Importar dados</button>
+    <div style="text-align:center;padding:18px 0 4px;font-size:11px;color:var(--text-faint);" onclick="tapVersion()">Corrida+ v<span id="appVersionDisplay"></span></div>
 
-    <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--text-faint);">Corrida+ v<span id="appVersionDisplay"></span></div>
+    <!-- DEV PANEL — só visível quando devMode está ativo -->
+    <div id="devPanel" style="display:none;margin-top:4px;border:1.5px dashed var(--terracotta);border-radius:var(--r-xl);padding:16px 18px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:var(--terracotta);">🛠️ Modo Dev</div>
+        <div class="switch on" onclick="toggleDevMode()"></div>
+      </div>
+
+      <div class="section-head" style="margin-top:0;"><div class="section-title">🕵️ Dados Ocultos e Limpeza</div></div>
+      <div class="switch-row" style="margin-bottom:12px;">
+        <div class="switch-row-text">
+          <div class="switch-row-title">Mostrar todos os registros</div>
+          <div class="switch-row-sub">Ative para ver e apagar ganhos, despesas variáveis e restaurar despesas fixas ocultadas de todos os meses.</div>
+        </div>
+        <div class="switch" id="hiddenModeSwitch" onclick="toggleHiddenMode()"></div>
+      </div>
+      <div id="hiddenDataContainer"></div>
+
+      <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
+      <div class="section-sub" style="margin-bottom:10px;">Se a sincronização automática não funcionar, cole aqui o JSON copiado do Google Sheets para importar os seus dados.</div>
+      <textarea id="importJsonInput" placeholder='Cole o JSON aqui… {"bills":[…],"monthData":{…},"profile":{…}}' style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:12px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--ink);resize:vertical;" oninput="this.style.borderColor=''"></textarea>
+      <button onclick="importFromJson()" style="width:100%;margin-top:8px;padding:13px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Importar dados</button>
+    </div>
+
+    <div style="height:24px;"></div>
   </div>
 
   <div class="screen" id="screen-stats">
@@ -1400,12 +1420,12 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       </div>
     </div>
     <div class="seg" id="statsViewSeg" style="margin:0 0 14px;">
-      <div class="seg-opt active" data-v="dia" onclick="setStatsView('dia')">Dia</div>
+      <div class="seg-opt" data-v="dia" onclick="setStatsView('dia')">Dia</div>
       <div class="seg-opt" data-v="semana" onclick="setStatsView('semana')">Semana</div>
-      <div class="seg-opt" data-v="mes" onclick="setStatsView('mes')">Mês</div>
+      <div class="seg-opt active" data-v="mes" onclick="setStatsView('mes')">Mês</div>
     </div>
 
-    <div class="month-nav" id="statsDayWeekNav" style="display:flex;">
+    <div class="month-nav" id="statsDayWeekNav" style="display:none;">
       <div class="month-nav-btn" onclick="changeStatsDayWeek(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1417,7 +1437,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
-    <div class="month-nav" id="statsMonthNav" style="display:none;">
+    <div class="month-nav" id="statsMonthNav" style="display:flex;">
       <div class="month-nav-btn" onclick="changeMonth(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1430,7 +1450,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     <div id="statsContent"></div>
   </div>
 
-  <div class="screen" id="screen-lucro">
+  <div class="screen active" id="screen-lucro">
     <div class="topbar">
       <div class="screen-title-group">
         <div class="screen-icon">
@@ -1445,12 +1465,12 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     </div>
 
     <div class="seg" id="lucroViewSeg" style="margin:0 0 14px;">
-      <div class="seg-opt active" data-v="dia" onclick="setLucroView('dia')">Dia</div>
+      <div class="seg-opt" data-v="dia" onclick="setLucroView('dia')">Dia</div>
       <div class="seg-opt" data-v="semana" onclick="setLucroView('semana')">Semana</div>
-      <div class="seg-opt" data-v="mes" onclick="setLucroView('mes')">Mês</div>
+      <div class="seg-opt active" data-v="mes" onclick="setLucroView('mes')">Mês</div>
     </div>
 
-    <div class="month-nav" id="lucroDayWeekNav" style="display:flex;">
+    <div class="month-nav" id="lucroDayWeekNav" style="display:none;">
       <div class="month-nav-btn" onclick="changeLucroDayWeek(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1462,7 +1482,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
-    <div class="month-nav" id="lucroMonthNav" style="display:none;">
+    <div class="month-nav" id="lucroMonthNav" style="display:flex;">
       <div class="month-nav-btn" onclick="changeMonth(-1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -1480,7 +1500,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 
 <div class="tabbar">
   <div class="tabbar-inner">
-    <div class="tab active" id="tabGanhos" onclick="goGanhos()">
+    <div class="tab" id="tabGanhos" onclick="goGanhos()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round"/></svg>
       Ganhos
     </div>
@@ -1488,7 +1508,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l3-4h12l3 4M3 7h18M3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M8 11h8"/></svg>
       Despesas
     </div>
-    <div class="tab" id="tabLucro" onclick="goLucro()">
+    <div class="tab active" id="tabLucro" onclick="goLucro()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round"/><circle cx="19" cy="5" r="3" fill="currentColor" stroke="none"/></svg>
       Lucro
     </div>
@@ -1513,7 +1533,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.5';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1551,13 +1571,16 @@ let currentMonthKey = defaultReferenceMonthKey();
 let localSettings = { darkMode: 'system', themeColor: 'green' };
 
 // Controle do botão de dados ocultos nas configurações
-let showHiddenData = false; 
+let showHiddenData = false;
+let devMode = false;
+let devTapCount = 0;
+let devTapTimer = null;
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
-let ganhosView = 'dia';
-let statsView = 'dia';
-let lucroView = 'dia';
+let ganhosView = 'mes';
+let statsView = 'mes';
+let lucroView = 'mes';
 let lucroRefDate = new Date();
 let ganhosRefDate = new Date();
 let statsRefDate = new Date();
@@ -1785,6 +1808,12 @@ async function loadAll(){
   const splashMsg = document.getElementById('splashMsg');
   const splash    = document.getElementById('splashScreen');
   function setSplash(msg){ if(splashMsg) splashMsg.textContent = msg; }
+  function hideSplash(){
+    if(splash){
+      splash.style.opacity = '0';
+      setTimeout(()=>{ splash.style.display='none'; }, 400);
+    }
+  }
 
   // Always load local data first so the app works instantly offline
   await loadLocalOnlySettings();
@@ -1793,21 +1822,17 @@ async function loadAll(){
   applyTabVisibility();
   applyAllAppearance();
   hideLoadingState();
-  renderGanhos();
+  renderLucro();
 
-  // Hide splash as soon as local data is ready
-  if(splash){
-    splash.style.opacity = '0';
-    setTimeout(()=>{ splash.style.display='none'; }, 400);
-  }
-
-  // Then try cloud sync in background (non-blocking)
+  // Try cloud sync — hide splash only after sync finishes (or if no URL)
   if(syncUrl){
     setSplash('A sincronizar…');
     setSyncStatus('saving');
-    _doCloudSync();
+    await _doCloudSync();
+    hideSplash();
   } else {
     setSyncStatus('nolink');
+    hideSplash();
   }
 }
 
@@ -2046,32 +2071,17 @@ function renderSettings(){
   const ivaEl = document.getElementById('ivaRate');
   if(ivaEl) ivaEl.value = profile.ivaRate || '';
 
-  // MODO DE LIMPEZA / DADOS OCULTOS
-  const oldHiddenSection = document.getElementById('hiddenDataSection');
-  if (oldHiddenSection) {
-      oldHiddenSection.remove();
-  }
-
-  let hiddenDataHtml = `
-    <div id="hiddenDataSection">
-      <div class="section-head" style="margin-top:28px;">
-        <div class="section-title">🕵️ Dados Ocultos e Limpeza</div>
-      </div>
-      <div class="switch-row" style="margin-bottom:12px;">
-        <div class="switch-row-text">
-          <div class="switch-row-title">Mostrar todos os registros</div>
-          <div class="switch-row-sub">Ative para ver e apagar ganhos, despesas variáveis e restaurar despesas fixas ocultadas de todos os meses.</div>
-        </div>
-        <div class="switch ${showHiddenData ? 'on' : ''}" onclick="toggleHiddenMode()"></div>
-      </div>
-      ${showHiddenData ? renderHiddenDataList() : ''}
-    </div>
-  `;
-
-  // Insert the new sections before the "Apagar todos os dados" button
-  const deleteAllBtn = document.querySelector('.delete-all-btn');
-  if (deleteAllBtn) {
-    deleteAllBtn.insertAdjacentHTML('beforebegin', hiddenDataHtml);
+  // DEV PANEL
+  const devPanel = document.getElementById('devPanel');
+  if(devPanel){
+    devPanel.style.display = devMode ? 'block' : 'none';
+    const sw = document.getElementById('hiddenModeSwitch');
+    if(sw) sw.className = 'switch' + (showHiddenData ? ' on' : '');
+    const container = document.getElementById('hiddenDataContainer');
+    if(container) container.innerHTML = showHiddenData ? renderHiddenDataList() : '';
+    // dark mode textarea
+    const ta = document.getElementById('importJsonInput');
+    if(ta) ta.style.background = document.body.classList.contains('dark') ? '#1C1C23' : '#fff';
   }
 }
 
@@ -2769,7 +2779,7 @@ function lucroBreakdownHTML(apps, comb, part, fixas, varOther, km, hours, contex
     </div>`;
 
   // Breakdown waterfall
-  html += `<div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-xl);padding:16px 18px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
+  html += `<div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:16px 18px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
     <div style="font-weight:700;font-size:var(--text-md);margin-bottom:14px;">Detalhamento</div>`;
 
   html += lucroLineHTML('Faturamento bruto (apps)', apps, false, '#fff', true);
@@ -2792,15 +2802,6 @@ function lucroBreakdownHTML(apps, comb, part, fixas, varOther, km, hours, contex
   </div>`;
   html += `</div>`;
 
-  // Efficiency cards
-  if(apps > 0){
-    html += `<div class="stat-cards">`;
-    html += `<div class="stat-card"><div class="stat-card-label">Líquido / km</div><div class="stat-card-value">${rsKm !== null ? fmt(rsKm) : '—'}</div></div>`;
-    html += `<div class="stat-card"><div class="stat-card-label">Lucro / km</div><div class="stat-card-value ${lucroKm !== null && lucroKm < 0 ? 'negative' : ''}">${lucroKm !== null ? fmt(lucroKm) : '—'}</div></div>`;
-    html += `<div class="stat-card"><div class="stat-card-label">Líquido / hora</div><div class="stat-card-value">${rsHora !== null ? fmt(rsHora) : '—'}</div></div>`;
-    html += `<div class="stat-card"><div class="stat-card-label">Lucro / hora</div><div class="stat-card-value ${lucroHora !== null && lucroHora < 0 ? 'negative' : ''}">${lucroHora !== null ? fmt(lucroHora) : '—'}</div></div>`;
-    html += `</div>`;
-  }
   return html;
 }
 function lucroLineHTML(label, value, isDeduction, bg, isBig){
@@ -3083,10 +3084,25 @@ function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   const saldo     = liquido - fixedTotal - varOther;
 
   let cardsHtml = `
-    <div class="stat-card"><div class="stat-card-label">${platformBadge('uber',16)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>
-    <div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',16)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`;
-  if(totalPart > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">🚘 Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`;
-  if(totalOut  > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">📦 Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`;
+    <div class="stat-card"><div class="stat-card-label">${platformBadge('uber',16)} Uber</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalUber)}</div></div>
+    <div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',16)} Bolt</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalBolt)}</div></div>`;
+  if(totalPart > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">🚘 Particular</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalPart)}</div></div>`;
+  if(totalOut  > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">📦 Outros</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalOut)}</div></div>`;
+  const totalGeral = totalUber + totalBolt + totalPart + totalOut;
+  cardsHtml += `<div class="stat-card" style="border-color:var(--vault);grid-column:1/-1;padding:18px 20px;">
+    <div class="stat-card-label" style="font-size:11px;margin-bottom:8px;">💰 Total bruto</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:32px;color:var(--ink);letter-spacing:-0.02em;margin-bottom:12px;">${fmt(totalGeral)}</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">TVDE</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--ink);">${fmt(totalUber + totalBolt)}</span>
+      </div>
+      ${(totalPart + totalOut) > 0 ? `<div style="display:flex;flex-direction:column;gap:2px;">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Pessoal</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--ink);">${fmt(totalPart + totalOut)}</span>
+      </div>` : ''}
+    </div>
+  </div>`;
   document.getElementById('earningsPlatformCards').innerHTML = cardsHtml;
   document.getElementById('earningsKmHint').textContent = '';
 
@@ -3505,6 +3521,26 @@ function renderMonthSummary(entry){
 // ---------------------------------------------------------------
 // FUNÇÕES DE DADOS OCULTOS / LIMPEZA
 // ---------------------------------------------------------------
+function tapVersion(){
+  clearTimeout(devTapTimer);
+  devTapCount++;
+  if(devTapCount >= 5){
+    devTapCount = 0;
+    devMode = !devMode;
+    showHiddenData = false;
+    renderSettings();
+    showToast(devMode ? '🛠️ Modo Dev ativado' : 'Modo Dev desativado');
+    return;
+  }
+  devTapTimer = setTimeout(()=>{ devTapCount = 0; }, 1500);
+}
+
+function toggleDevMode(){
+  devMode = !devMode;
+  if(!devMode) showHiddenData = false;
+  renderSettings();
+}
+
 function toggleHiddenMode() {
   showHiddenData = !showHiddenData;
   renderSettings();
