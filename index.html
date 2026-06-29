@@ -1538,7 +1538,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.7.9';
+const APP_VERSION = '2.8.0';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2456,18 +2456,18 @@ function combustivelAmount(expenses){
 function computeLiquido(items, expenses){
   const apps = ganhosAppsAmount(items);
   const comb = combustivelAmount(expenses);
-  const iva  = ivaAmount(apps - comb);
+  const iva  = ivaAmount(apps);
   const part = ganhosParticularsAmount(items);
-  return (apps - comb - iva) + part;
+  return (apps - iva) - comb + part;
 }
 
 // For month-level summaries using entry (includes all variableExpenses)
 function computeLiquidoFromEntry(entry){
   const apps = entry.earnings.filter(e=>e.platform==='uber'||e.platform==='bolt').reduce((s,e)=>s+(e.amount||0),0);
   const comb = entry.variableExpenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva  = ivaAmount(apps - comb);
+  const iva  = ivaAmount(apps);
   const part = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
-  return (apps - comb - iva) + part;
+  return (apps - iva) - comb + part;
 }
 // Cards shared by the Dia/Semana/Mês stat views: efficiency (R$/km, R$/hora),
 // estimated vs. actual fuel cost (using the vehicle settings from "Você"),
@@ -2480,8 +2480,8 @@ function uberMetricsHTML(items, expenses, extraDeduction){
   const varOther = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
   const km    = sumKm(items);
   const hours = sumHours(items);
-  const iva   = ivaAmount(apps - comb);
-  const liquido = (apps - comb - iva) + part;
+  const iva   = ivaAmount(apps);
+  const liquido = (apps - iva) - comb + part;
   const lucro = liquido - varOther - extraDeduction;
   // Metrics use NET (post-IVA) to be more truthful
   const liquidoKm  = km > 0 ? liquido / km : null;
@@ -2526,9 +2526,9 @@ function renderStatsDay(){
   const brutoPart = part.reduce((s,e)=>s+(e.amount||0),0);
   const comb      = combustivelAmount(expenses);
   const varOther  = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(brutoTVDE - comb);
+  const iva       = ivaAmount(brutoTVDE);
   const ivaVal    = ivaRate();
-  const liquido   = (brutoTVDE - comb - iva) + brutoPart;
+  const liquido   = (brutoTVDE - iva) - comb + brutoPart;
   const lucro     = liquido - varOther;
   const totalUber = sumByPlatform(items,'uber'), totalBolt = sumByPlatform(items,'bolt');
   const totalPart = sumByPlatform(items,'particular'), totalOut = sumByPlatform(items,'outros');
@@ -2577,9 +2577,9 @@ function renderStatsWeek(){
   const brutoPart = part.reduce((s,e)=>s+(e.amount||0),0);
   const comb      = combustivelAmount(expenses);
   const varOther  = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(brutoTVDE - comb);
+  const iva       = ivaAmount(brutoTVDE);
   const ivaVal    = ivaRate();
-  const liquido   = (brutoTVDE - comb - iva) + brutoPart;
+  const liquido   = (brutoTVDE - iva) - comb + brutoPart;
   const lucro     = liquido - varOther;
   const totalUber = sumByPlatform(items,'uber'), totalBolt = sumByPlatform(items,'bolt');
   const totalPart = sumByPlatform(items,'particular'), totalOut = sumByPlatform(items,'outros');
@@ -2602,7 +2602,7 @@ function renderStatsWeek(){
     const dPart = items.filter(x=>x.date===dIso&&(x.platform==='particular'||x.platform==='outros')).reduce((s,x)=>s+(x.amount||0),0);
     const dComb = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
     const dVar  = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-    const dDesp = dComb + ivaAmount(dTVDE - dComb) + dVar;
+    const dDesp = dComb + ivaAmount(dTVDE) + dVar;
     dayLabels.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()).toLocaleDateString('pt-BR',{weekday:'narrow'}));
     dayDespesas.push(Math.max(0, dDesp));
     dayGanhos.push(Math.max(0, dTVDE + dPart));
@@ -2720,7 +2720,7 @@ function renderStatsMonth(){
   const weekLabels  = Array.from({length:nWeeks}, (_,i) => `Sem. ${i+1}`);
   const weekGanhos  = weekApps.map((a,i) => Math.max(0, a + weekPart[i]));
   const weekDespesas = weekApps.map((a,i) => {
-    const iva = ivaAmount(a - weekComb[i]);
+    const iva = ivaAmount(a);
     return weekComb[i] + iva + fixasPorSemana + weekVar[i];
   });
   html += chartBoxWrap('Ganhos vs. despesas por semana', 'Verde = ganhos · Vermelho = despesas', groupedBarSVG(weekLabels, [
@@ -2735,7 +2735,7 @@ function renderStatsMonth(){
       const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
       const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
       const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      return comb + ivaAmount(apps - comb) + totalFixedBills(e) + varO;
+      return comb + ivaAmount(apps) + totalFixedBills(e) + varO;
     });
     const ganhosVals = monthKeys.map(k => {
       const e = ensureMonthEntry(k);
@@ -2799,9 +2799,9 @@ function changeLucroDayWeek(delta){
 // varOther = outras despesas variáveis (sem combustível)
 // fixas  = despesas fixas do período
 function lucroBreakdownHTML(apps, comb, part, fixas, varOther, km, hours, context){
-  const iva      = ivaAmount(apps - comb);
+  const iva      = ivaAmount(apps);
   const ivaVal   = ivaRate();
-  const liquido  = (apps - comb - iva) + part;
+  const liquido  = (apps - iva) - comb + part;
   const variaveis = varOther; // alias para compatibilidade com o resto da função
   const lucro    = liquido - fixas - variaveis;
   const rsKm     = km > 0 ? liquido / km : null;  // líquido / km
@@ -2823,16 +2823,16 @@ function lucroBreakdownHTML(apps, comb, part, fixas, varOther, km, hours, contex
     <div style="font-weight:700;font-size:var(--text-md);margin-bottom:14px;">Detalhamento</div>`;
 
   html += lucroLineHTML('Faturamento bruto (apps)', apps, false, '#fff', true);
-  if(comb > 0) html += lucroLineHTML('Combustível', -comb, true);
   if(ivaVal > 0){
     html += lucroLineHTML(`IVA (${ivaVal}%)`, -iva, true);
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin:4px 0;border-top:1.5px dashed var(--line);border-bottom:1.5px dashed var(--line);">
       <span style="font-size:12px;font-weight:600;color:var(--text-muted);">Líquido TVDE</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;">${fmt(apps - comb - iva)}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;">${fmt(apps - iva)}</span>
     </div>`;
   }
-  if(part > 0) html += lucroLineHTML('Particular / Outros', part, false);
-  if(fixas > 0)    html += lucroLineHTML('Despesas fixas',    -fixas,    true);
+  if(part > 0)      html += lucroLineHTML('Particular / Outros', part, false);
+  if(comb > 0)      html += lucroLineHTML('Combustível', -comb, true);
+  if(fixas > 0)     html += lucroLineHTML('Despesas fixas', -fixas, true);
   if(variaveis > 0) html += lucroLineHTML('Outras despesas variáveis', -variaveis, true);
 
   // Final lucro line
@@ -2964,7 +2964,7 @@ function renderLucroMonth(){
   });
   const fixasPorSemana = fixas / nWeeks;
   const weekLucro = wkApps.map((a,i) => {
-    const liq = (a - wkComb[i] - ivaAmount(a - wkComb[i])) + wkPart[i];
+    const liq = (a - ivaAmount(a)) - wkComb[i] + wkPart[i];
     return Math.max(0, liq - fixasPorSemana - wkVar[i]);
   });
   html += chartBoxWrap('Lucro por semana', 'Lucro líquido estimado por semana', groupedBarSVG(weekLabels, [{ name:'Lucro', color:'#3E6650', values: weekLucro }]));
@@ -2979,7 +2979,7 @@ function renderLucroMonth(){
       const part = e.earnings.filter(x=>x.platform==='particular'||x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
       const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
       const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      const liq  = (apps - comb - ivaAmount(apps - comb)) + part;
+      const liq  = (apps - ivaAmount(apps)) - comb + part;
       return Math.max(0, liq - totalFixedBills(e) - varO);
     });
     html += chartBoxWrap('Evolução do lucro', 'Lucro líquido dos últimos meses', groupedBarSVG(mLabels, [{ name:'Lucro', color:'#3E6650', values: mLucros }]));
@@ -3118,9 +3118,9 @@ function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   const part      = totalPart + totalOut;
   const comb      = (expenses && Array.isArray(expenses)) ? combustivelAmount(expenses) : (typeof expenses === 'number' ? 0 : 0);
   const varOther  = (expenses && Array.isArray(expenses)) ? expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0) : 0;
-  const iva       = ivaAmount(apps - comb);
+  const iva       = ivaAmount(apps);
   const ivaRateVal = ivaRate();
-  const liquido   = (apps - comb - iva) + part;
+  const liquido   = (apps - iva) - comb + part;
   const saldo     = liquido - fixedTotal - varOther;
 
   let cardsHtml = `
@@ -3247,8 +3247,13 @@ function openAddIncomeSheet(){
   }
   openSheet(`
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Novo ganho</div>
-    <div class="sheet-sub">${sheetSub}</div>
+    <div class="sheet-header" style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+      <button onclick="closeSheet()" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--text-muted);line-height:1;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="sheet-title" style="margin:0;">Novo ganho</div>
+    </div>
+    <div class="sheet-sub" style="margin-left:34px;">${sheetSub}</div>
     <div class="field"><label>Dia do turno</label><input type="date" id="incDate" value="${defaultDate}" /></div>
     <div style="margin-bottom:10px;">
       <div class="section-sub" style="margin-bottom:8px;font-weight:700;">Uber</div>
@@ -3526,11 +3531,11 @@ function renderMonthSummary(entry){
   const part      = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
   const ganhos    = apps + part;
   const comb      = entry.variableExpenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const iva       = ivaAmount(apps - comb);
+  const iva       = ivaAmount(apps);
   const fixas     = totalFixedBills(entry);
   // variáveis sem combustível (o combustível já foi deduzido do bruto apps)
   const varOther  = entry.variableExpenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const liquido   = (apps - comb - iva) + part;
+  const liquido   = (apps - iva) - comb + part;
   const lucro     = liquido - fixas - varOther;
   const ivaRateVal = ivaRate();
   let html = `
