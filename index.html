@@ -1533,7 +1533,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.7.5';
+const APP_VERSION = '2.7.6';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2547,7 +2547,7 @@ function renderStatsWeek(){
   </div>`;
 
   // Day-by-day chart
-  const dayLabels=[], dayLiquido=[], dayLucro=[];
+  const dayLabels=[], dayDespesas=[], dayLucro=[];
   for(let i=0;i<7;i++){
     const d=addDays(start,i); const dIso=isoDate(d);
     const dTVDE = items.filter(x=>x.date===dIso&&(x.platform==='uber'||x.platform==='bolt')).reduce((s,x)=>s+(x.amount||0),0);
@@ -2555,13 +2555,14 @@ function renderStatsWeek(){
     const dComb = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
     const dLiq  = (dTVDE - dComb - ivaAmount(dTVDE - dComb)) + dPart;
     const dVar  = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+    const dDesp = dComb + ivaAmount(dTVDE - dComb) + dVar;
     dayLabels.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()).toLocaleDateString('pt-BR',{weekday:'narrow'}));
-    dayLiquido.push(Math.max(0, dLiq));
+    dayDespesas.push(Math.max(0, dDesp));
     dayLucro.push(Math.max(0, dLiq - dVar));
   }
-  html += chartBoxWrap('Por dia', 'Líquido vs. lucro líquido', groupedBarSVG(dayLabels, [
-    { name:'Líquido', color:'rgba(31,58,46,0.3)', values: dayLiquido },
-    { name:'Lucro',   color:'#3E6650', values: dayLucro }
+  html += chartBoxWrap('Por dia', 'Lucro vs. despesas por dia', groupedBarSVG(dayLabels, [
+    { name:'Despesas', color:'var(--terracotta)', values: dayDespesas },
+    { name:'Lucro',    color:'#3E6650',           values: dayLucro }
   ]));
 
   const breakdownBars = [];
@@ -2672,22 +2673,26 @@ function renderStatsMonth(){
   const weekLabels  = Array.from({length:nWeeks}, (_,i) => `Sem. ${i+1}`);
   const weekLiquido = weekApps.map((a,i) => Math.max(0, (a - weekComb[i] - ivaAmount(a - weekComb[i])) + weekPart[i]));
   const weekLucro   = weekLiquido.map((liq,i) => Math.max(0, liq - fixasPorSemana - weekVar[i]));
-  html += chartBoxWrap('Por semana', 'Líquido vs. lucro líquido por semana', groupedBarSVG(
+  const weekDespesas = weekApps.map((a,i) => {
+    const iva = ivaAmount(a - weekComb[i]);
+    return weekComb[i] + iva + fixasPorSemana + weekVar[i];
+  });
+  html += chartBoxWrap('Por semana', 'Lucro vs. despesas por semana', groupedBarSVG(
     weekLabels,
     [
-      { name:'Líquido', color:'rgba(31,58,46,0.3)', values: weekLiquido },
-      { name:'Lucro',   color:'#3E6650', values: weekLucro }
+      { name:'Despesas', color:'var(--terracotta)', values: weekDespesas },
+      { name:'Lucro',    color:'#3E6650',           values: weekLucro }
     ]
   ));
 
   // ---- Últimos meses (com ano) ----
   if(monthKeys.length){
-    const liquidoVals = monthKeys.map(k => {
+    const despesasVals = monthKeys.map(k => {
       const e = ensureMonthEntry(k);
       const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
-      const part = e.earnings.filter(x=>x.platform==='particular'||x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
       const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      return Math.max(0, (apps - comb - ivaAmount(apps - comb)) + part);
+      const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+      return comb + ivaAmount(apps - comb) + totalFixedBills(e) + varO;
     });
     const lucroVals = monthKeys.map(k => {
       const e = ensureMonthEntry(k);
@@ -2705,11 +2710,11 @@ function renderStatsMonth(){
       const shortMonth = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
       return years.size > 1 ? `${shortMonth} ${String(y).slice(2)}` : shortMonth;
     });
-    html += chartBoxWrap('Evolução — últimos meses', 'Líquido vs. lucro mês a mês', groupedBarSVG(
+    html += chartBoxWrap('Evolução — últimos meses', 'Lucro vs. despesas mês a mês', groupedBarSVG(
       mLabels,
       [
-        { name:'Líquido', color:'rgba(31,58,46,0.3)', values: liquidoVals },
-        { name:'Lucro',   color:'#3E6650', values: lucroVals }
+        { name:'Despesas', color:'var(--terracotta)', values: despesasVals },
+        { name:'Lucro',    color:'#3E6650',           values: lucroVals }
       ]
     ));
   }
