@@ -1533,7 +1533,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.7.6';
+const APP_VERSION = '2.7.8';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2321,6 +2321,47 @@ function groupedBarSVG(labels, series){
   const legend = series.map(s => `<div class="chart-legend-item"><span class="chart-legend-dot" style="background:${s.color};"></span>${escapeHtml(s.name)}</div>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">${bars}</svg><div class="chart-legend">${legend}</div>`;
 }
+
+// Stacked bar chart: each bar = despesas (bottom, red) + lucro (top, green) = ganho total.
+// Tudo acima da barra vermelha é lucro visual.
+function stackedBarSVG(labels, despesasVals, lucroVals){
+  const w = 300, h = 170, padBottom = 22, padTop = 10, padLeft = 2;
+  const totalVals = labels.map((_,i) => (despesasVals[i]||0) + (lucroVals[i]||0));
+  const maxVal = Math.max(1, ...totalVals);
+  const n = Math.max(1, labels.length);
+  const groupWidth = (w - padLeft) / n;
+  const barWidth = Math.max(4, groupWidth - 8);
+  const chartH = h - padBottom - padTop;
+  let bars = '';
+  labels.forEach((label, i) => {
+    const desp = despesasVals[i] || 0;
+    const lucro = lucroVals[i] || 0;
+    const total = desp + lucro;
+    const totalH = (total / maxVal) * chartH;
+    const despH  = (desp  / maxVal) * chartH;
+    const lucroH = (lucro / maxVal) * chartH;
+    const x = padLeft + i * groupWidth + (groupWidth - barWidth) / 2;
+    const baseY = h - padBottom;
+    // Despesas — bottom segment (red)
+    if(despH > 0){
+      bars += `<rect x="${x.toFixed(1)}" y="${(baseY - despH).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${despH.toFixed(1)}" rx="0" fill="#C0544A"></rect>`;
+    }
+    // Lucro — top segment (green), rounded top only
+    if(lucroH > 0){
+      const ly = baseY - despH - lucroH;
+      bars += `<rect x="${x.toFixed(1)}" y="${ly.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${(lucroH + 3).toFixed(1)}" rx="3" fill="#3E6650"></rect>`;
+      bars += `<rect x="${x.toFixed(1)}" y="${(ly + 3).toFixed(1)}" width="${barWidth.toFixed(1)}" height="3" rx="0" fill="#3E6650"></rect>`;
+    }
+    // Label
+    const labelX = padLeft + i * groupWidth + groupWidth / 2;
+    bars += `<text x="${labelX.toFixed(1)}" y="${h - 6}" font-size="9" text-anchor="middle" class="chart-text">${escapeHtml(label)}</text>`;
+  });
+  const legend = `<div class="chart-legend">
+    <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#3E6650;"></span>Ganhos</div>
+    <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#C0544A;"></span>Despesas</div>
+  </div>`;
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">${bars}</svg>${legend}`;
+}
 // Simple horizontal proportion bars (no external lib needed).
 function horizontalBarsHTML(items){
   const maxVal = Math.max(1, ...items.map(it => Math.abs(it.value)));
@@ -2547,23 +2588,19 @@ function renderStatsWeek(){
   </div>`;
 
   // Day-by-day chart
-  const dayLabels=[], dayDespesas=[], dayLucro=[];
+  const dayLabels=[], dayDespesas=[], dayGanhos=[];
   for(let i=0;i<7;i++){
     const d=addDays(start,i); const dIso=isoDate(d);
     const dTVDE = items.filter(x=>x.date===dIso&&(x.platform==='uber'||x.platform==='bolt')).reduce((s,x)=>s+(x.amount||0),0);
     const dPart = items.filter(x=>x.date===dIso&&(x.platform==='particular'||x.platform==='outros')).reduce((s,x)=>s+(x.amount||0),0);
     const dComb = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-    const dLiq  = (dTVDE - dComb - ivaAmount(dTVDE - dComb)) + dPart;
     const dVar  = expenses.filter(x=>(x.date||isoDateFromTs(x.ts))===dIso&&x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
     const dDesp = dComb + ivaAmount(dTVDE - dComb) + dVar;
     dayLabels.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()).toLocaleDateString('pt-BR',{weekday:'narrow'}));
     dayDespesas.push(Math.max(0, dDesp));
-    dayLucro.push(Math.max(0, dLiq - dVar));
+    dayGanhos.push(Math.max(0, dTVDE + dPart));
   }
-  html += chartBoxWrap('Por dia', 'Lucro vs. despesas por dia', groupedBarSVG(dayLabels, [
-    { name:'Despesas', color:'var(--terracotta)', values: dayDespesas },
-    { name:'Lucro',    color:'#3E6650',           values: dayLucro }
-  ]));
+  html += chartBoxWrap('Ganhos vs. despesas por dia', 'Verde = ganhos · Vermelho = despesas', stackedBarSVG(dayLabels, dayDespesas, dayGanhos));
 
   const breakdownBars = [];
   if(totalUber>0) breakdownBars.push({label:'Uber', value:totalUber, color:'#0a0a0a'});
@@ -2671,19 +2708,12 @@ function renderStatsMonth(){
   });
   const fixasPorSemana = fixasMes / nWeeks;
   const weekLabels  = Array.from({length:nWeeks}, (_,i) => `Sem. ${i+1}`);
-  const weekLiquido = weekApps.map((a,i) => Math.max(0, (a - weekComb[i] - ivaAmount(a - weekComb[i])) + weekPart[i]));
-  const weekLucro   = weekLiquido.map((liq,i) => Math.max(0, liq - fixasPorSemana - weekVar[i]));
+  const weekGanhos  = weekApps.map((a,i) => Math.max(0, a + weekPart[i]));
   const weekDespesas = weekApps.map((a,i) => {
     const iva = ivaAmount(a - weekComb[i]);
     return weekComb[i] + iva + fixasPorSemana + weekVar[i];
   });
-  html += chartBoxWrap('Por semana', 'Lucro vs. despesas por semana', groupedBarSVG(
-    weekLabels,
-    [
-      { name:'Despesas', color:'var(--terracotta)', values: weekDespesas },
-      { name:'Lucro',    color:'#3E6650',           values: weekLucro }
-    ]
-  ));
+  html += chartBoxWrap('Ganhos vs. despesas por semana', 'Verde = ganhos · Vermelho = despesas', stackedBarSVG(weekLabels, weekDespesas, weekGanhos));
 
   // ---- Últimos meses (com ano) ----
   if(monthKeys.length){
@@ -2694,14 +2724,9 @@ function renderStatsMonth(){
       const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
       return comb + ivaAmount(apps - comb) + totalFixedBills(e) + varO;
     });
-    const lucroVals = monthKeys.map(k => {
+    const ganhosVals = monthKeys.map(k => {
       const e = ensureMonthEntry(k);
-      const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
-      const part = e.earnings.filter(x=>x.platform==='particular'||x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
-      const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
-      const liq  = (apps - comb - ivaAmount(apps - comb)) + part;
-      return Math.max(0, liq - totalFixedBills(e) - varO);
+      return e.earnings.reduce((s,x)=>s+(x.amount||0),0);
     });
     // Labels with year if different years present
     const years = new Set(monthKeys.map(k=>k.split('-')[0]));
@@ -2710,13 +2735,7 @@ function renderStatsMonth(){
       const shortMonth = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
       return years.size > 1 ? `${shortMonth} ${String(y).slice(2)}` : shortMonth;
     });
-    html += chartBoxWrap('Evolução — últimos meses', 'Lucro vs. despesas mês a mês', groupedBarSVG(
-      mLabels,
-      [
-        { name:'Despesas', color:'var(--terracotta)', values: despesasVals },
-        { name:'Lucro',    color:'#3E6650',           values: lucroVals }
-      ]
-    ));
+    html += chartBoxWrap('Ganhos vs. despesas — últimos meses', 'Verde = ganhos · Vermelho = despesas', stackedBarSVG(mLabels, despesasVals, ganhosVals));
   }
 
   // ---- Despesas por categoria ----
