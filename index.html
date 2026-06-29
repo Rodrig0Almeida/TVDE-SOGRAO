@@ -1260,8 +1260,6 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 
       <div class="section-head"><div class="section-title" id="incomeSectionTitle">Ganhos do dia</div></div>
       <div id="incomeSection"></div>
-
-      <div class="month-summary" id="monthSummary" style="margin-top:22px;"></div>
     </div>
   </div>
 
@@ -1306,8 +1304,6 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
     <div class="section-head"><div class="section-title">Despesas variáveis</div></div>
     <div class="section-sub" style="margin:0 0 12px;">Combustível, manutenção, lavagem e outras despesas. Registe o valor gasto por dia.</div>
     <div id="variableExpensesContent"></div>
-
-    <div class="month-summary" id="monthSummaryDespesas" style="margin-top:20px;"></div>
   </div>
 
   <div class="screen" id="screen-settings">
@@ -1538,7 +1534,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.8.3';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -3126,8 +3122,10 @@ function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   let cardsHtml = `
     <div class="stat-card"><div class="stat-card-label">${platformBadge('uber',16)} Uber</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalUber)}</div></div>
     <div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',16)} Bolt</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalBolt)}</div></div>`;
-  if(totalPart > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">🚘 Particular</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalPart)}</div></div>`;
-  if(totalOut  > 0) cardsHtml += `<div class="stat-card"><div class="stat-card-label">📦 Outros</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalOut)}</div></div>`;
+  const partStyle = (totalPart > 0 && totalOut === 0) ? 'grid-column:1/-1;' : '';
+  const outStyle  = (totalOut  > 0 && totalPart === 0) ? 'grid-column:1/-1;' : '';
+  if(totalPart > 0) cardsHtml += `<div class="stat-card" style="${partStyle}"><div class="stat-card-label">🚘 Particular</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalPart)}</div></div>`;
+  if(totalOut  > 0) cardsHtml += `<div class="stat-card" style="${outStyle}"><div class="stat-card-label">📦 Outros</div><div class="stat-card-value" style="font-size:22px;">${fmt(totalOut)}</div></div>`;
   const totalGeral = totalUber + totalBolt + totalPart + totalOut;
   cardsHtml += `<div class="stat-card" style="border-color:var(--vault);grid-column:1/-1;padding:18px 20px;">
     <div class="stat-card-label" style="font-size:11px;margin-bottom:8px;">💰 Total bruto</div>
@@ -3158,7 +3156,8 @@ function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
       <div class="ms-label ms-final-label">${saldo>=0?'💰 Lucro líquido':'⚠️ Faltou'}</div>
       <div class="ms-value">${fmt(Math.abs(saldo))}</div>
     </div>`;
-  document.getElementById('monthSummary').innerHTML = summaryHtml;
+  const msEl = document.getElementById('monthSummary');
+  if(msEl) msEl.innerHTML = summaryHtml;
 }
 
 function renderGanhosDay(){
