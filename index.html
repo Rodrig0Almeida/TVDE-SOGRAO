@@ -423,6 +423,7 @@ body {
   padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
   max-height: 88vh;
   overflow-y: auto;
+  overflow-x: hidden;
   animation: slideUp 0.25s ease;
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -464,6 +465,9 @@ body {
 .field select,
 .field textarea {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1.5px solid var(--line);
   background: #fff;
   border-radius: var(--r-md);
@@ -472,6 +476,12 @@ body {
   font-family: 'Inter', sans-serif;
   color: var(--ink);
   transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input[type="date"]{
+  -webkit-appearance: none;
+  appearance: none;
 }
 .field input:focus,
 .field select:focus,
@@ -482,6 +492,8 @@ body {
 
 .field-money { position: relative; }
 .field-money input {
+  width: 100%;
+  box-sizing: border-box;
   padding-left: 34px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
@@ -1547,7 +1559,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.8.9';
+const APP_VERSION = '2.9.0';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
