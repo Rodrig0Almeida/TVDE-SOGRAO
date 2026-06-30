@@ -1547,7 +1547,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.8.6';
+const APP_VERSION = '2.8.7';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1739,10 +1739,13 @@ function applyCloudData(data){
   bills = mergedBills;
   monthData = (data.monthData && typeof data.monthData === 'object') ? data.monthData : {};
   const cloudProfile = (data.profile && typeof data.profile === 'object') ? data.profile : { name:'', photo:null };
-  // Preserve local photo — it's never sent to cloud (too large), so don't overwrite it on pull
+  // photo now syncs via the cloud payload. If the cloud has no photo (older
+  // payload or never set on another device), keep whatever is stored locally
+  // instead of wiping it out.
   const localPhoto = profile.photo;
   profile = cloudProfile;
   if(!profile.photo && localPhoto) profile.photo = localPhoto;
+  if(profile.photo) syncAllAvatars();
   ensureVehicleDefaults();
 
   // ── Backward-compat migration ──────────────────────────────────
@@ -1888,11 +1891,8 @@ async function pushToCloud(){
   if(!syncUrl) return;
   // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
   // ivaRate lives in profile and IS synced.
-  // profile.photo is stripped before cloud push — it's a base64 blob (~350KB) that would
-  // slow down or break the Apps Script endpoint. Photo stays local-only.
-  const profileForCloud = { ...profile };
-  delete profileForCloud.photo;
-  const payload = { bills, monthData, profile: profileForCloud };
+  // profile.photo IS included in the payload so it syncs across devices.
+  const payload = { bills, monthData, profile };
   try{
     await fetch(syncUrl, {
       method: 'POST',
