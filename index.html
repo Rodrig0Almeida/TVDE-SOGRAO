@@ -1559,7 +1559,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.9.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -3665,21 +3665,40 @@ async function checkForUpdates(){
   const btn = document.getElementById('checkUpdateBtn');
   const res = document.getElementById('updateResult');
   if(btn) btn.disabled = true;
-  if(res) res.textContent = 'A verificar…';
-  // Uses a public CORS-friendly endpoint — replace URL with your own release manifest if needed
-  const MANIFEST_URL = 'https://raw.githubusercontent.com/corridaplus/app/main/version.json';
+  if(res) res.textContent = '';
+  showToast('🔄 Buscando versão mais recente…');
+
   try{
-    const r = await fetch(MANIFEST_URL + '?t=' + Date.now());
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    const latest = data.version || '?';
-    if(latest === APP_VERSION){
-      if(res) res.innerHTML = `✅ Está na versão mais recente (<strong>${APP_VERSION}</strong>)`;
-    } else {
-      if(res) res.innerHTML = `🆕 Nova versão disponível: <strong>${latest}</strong><br><a href="${data.url||'#'}" target="_blank" style="color:var(--vault-light);font-weight:700;">Descarregar atualização</a>`;
+    // Busca a própria página, ignorando cache do navegador
+    const url  = location.href.split('?')[0] + '?v=' + Date.now();
+    const resp = await fetch(url, { cache: 'no-store' });
+    const html = await resp.text();
+
+    // Extrai a versão publicada no servidor via regex
+    const match = html.match(/const APP_VERSION\s*=\s*'([^']+)'/);
+    const remoteVersion = match ? match[1] : null;
+
+    if(!remoteVersion){
+      showToast('Não foi possível ler a versão remota.');
+      if(res) res.textContent = 'Não foi possível ler a versão remota.';
+      return;
     }
-  } catch(e){
-    if(res) res.textContent = 'Não foi possível verificar. Verifique a ligação.';
+
+    if(remoteVersion === APP_VERSION){
+      showToast(`✅ Você já está na versão mais recente (${APP_VERSION}).`);
+      if(res) res.innerHTML = `✅ Está na versão mais recente (<strong>${APP_VERSION}</strong>)`;
+      return;
+    }
+
+    // Versão diferente → pergunta e recarrega forçando bypass de cache
+    if(res) res.innerHTML = `🆕 Nova versão disponível: <strong>${remoteVersion}</strong> (atual: ${APP_VERSION})`;
+    const msg = `Nova versão disponível!\n\nAtual:  v${APP_VERSION}\nNova:   v${remoteVersion}\n\nAtualizar agora?`;
+    if(confirm(msg)){
+      location.replace(location.href.split('?')[0] + '?v=' + Date.now());
+    }
+  } catch(err){
+    showToast('Erro ao verificar atualização: ' + err.message);
+    if(res) res.textContent = 'Erro ao verificar atualização.';
   } finally {
     if(btn) btn.disabled = false;
   }
