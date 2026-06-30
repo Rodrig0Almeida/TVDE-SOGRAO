@@ -1547,7 +1547,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.8.7';
+const APP_VERSION = '2.8.9';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2691,45 +2691,63 @@ function renderStatsMonth(){
   const totalOut      = totalEarningsByPlatform(entry,'outros');
 
   // ---- Bloco TVDE ----
+  const tvdeCardsArr = [];
+  if(totalUber>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">${platformBadge('uber',14)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>`);
+  if(totalBolt>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',14)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`);
+  tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>`);
+  if(ivaVal>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`);
+  if(comVal>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Comissão (${comVal}%)</div><div class="stat-card-value negative">− ${fmt(com)}</div></div>`);
+  if(combMes>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Combustível</div><div class="stat-card-value negative">− ${fmt(combMes)}</div></div>`);
+  tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Líquido TVDE</div><div class="stat-card-value">${fmt(liquidoTVDE)}</div></div>`);
+  if(tvdeCardsArr.length % 2 === 1){
+    tvdeCardsArr[tvdeCardsArr.length-1] = tvdeCardsArr[tvdeCardsArr.length-1].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+  }
   let html = `
   <div class="chart-box" style="margin-bottom:14px;">
     <div class="chart-box-title">🚖 TVDE — Uber &amp; Bolt</div>
     <div class="chart-box-sub">${monthNameYear}</div>
     <div class="stat-cards" style="margin-bottom:0;">
-      <div class="stat-card"><div class="stat-card-label">Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>
-      ${ivaVal>0?`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`:''}
-      ${comVal>0?`<div class="stat-card"><div class="stat-card-label">Comissão (${comVal}%)</div><div class="stat-card-value negative">− ${fmt(com)}</div></div>`:''}
-      ${combMes>0?`<div class="stat-card"><div class="stat-card-label">Combustível</div><div class="stat-card-value negative">− ${fmt(combMes)}</div></div>`:''}
-      <div class="stat-card"><div class="stat-card-label">Líquido TVDE</div><div class="stat-card-value">${fmt(liquidoTVDE)}</div></div>
-      ${totalUber>0?`<div class="stat-card"><div class="stat-card-label">${platformBadge('uber',14)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>`:''}
-      ${totalBolt>0?`<div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',14)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`:''}
+      ${tvdeCardsArr.join('\n      ')}
     </div>
   </div>`;
 
   // ---- Bloco Pessoal (só mostra se houver) ----
   if(brutoPart > 0){
+    const pessoalCardsArr = [];
+    if(totalPart>0) pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`);
+    if(totalOut>0) pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`);
+    pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Total pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>`);
+    if(pessoalCardsArr.length % 2 === 1){
+      pessoalCardsArr[pessoalCardsArr.length-1] = pessoalCardsArr[pessoalCardsArr.length-1].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+    }
     html += `
   <div class="chart-box" style="margin-bottom:14px;">
     <div class="chart-box-title">🚘 Pessoal — Particular &amp; Outros</div>
     <div class="chart-box-sub">Sem desconto de IVA · ${monthNameYear}</div>
     <div class="stat-cards" style="margin-bottom:0;">
-      ${totalPart>0?`<div class="stat-card"><div class="stat-card-label">Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`:''}
-      ${totalOut>0?`<div class="stat-card"><div class="stat-card-label">Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`:''}
-      <div class="stat-card"><div class="stat-card-label">Total pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>
+      ${pessoalCardsArr.join('\n      ')}
     </div>
   </div>`;
   }
 
   // ---- Resumo geral ----
+  const resumoCardsArr = [];
+  resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">💧 Líquido total</div><div class="stat-card-value">${fmt(liquido)}</div></div>`);
+  resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Despesas fixas</div><div class="stat-card-value negative">− ${fmt(fixasMes)}</div></div>`);
+  if(varOtherMes>0) resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOtherMes)}</div></div>`);
+  resumoCardsArr.push(`<div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do mês</div><div class="stat-card-value ${lucroMes<0?'negative':''}">${fmt(lucroMes)}</div></div>`);
+  if(resumoCardsArr.length % 2 === 1){
+    const lastIdx = resumoCardsArr.length-1;
+    resumoCardsArr[lastIdx] = resumoCardsArr[lastIdx].includes('style="border-color:var(--vault);"')
+      ? resumoCardsArr[lastIdx].replace('style="border-color:var(--vault);"', 'style="border-color:var(--vault);grid-column:1/-1;"')
+      : resumoCardsArr[lastIdx].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+  }
   html += `
   <div class="chart-box" style="margin-bottom:14px;">
     <div class="chart-box-title">📊 Resumo do mês</div>
     <div class="chart-box-sub">${monthNameYear}</div>
     <div class="stat-cards" style="margin-bottom:0;">
-      <div class="stat-card"><div class="stat-card-label">💧 Líquido total</div><div class="stat-card-value">${fmt(liquido)}</div></div>
-      <div class="stat-card"><div class="stat-card-label">Despesas fixas</div><div class="stat-card-value negative">− ${fmt(fixasMes)}</div></div>
-      ${varOtherMes>0?`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOtherMes)}</div></div>`:''}
-      <div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do mês</div><div class="stat-card-value ${lucroMes<0?'negative':''}">${fmt(lucroMes)}</div></div>
+      ${resumoCardsArr.join('\n      ')}
     </div>
   </div>`;
 
