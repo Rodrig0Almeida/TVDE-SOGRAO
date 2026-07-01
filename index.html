@@ -1454,6 +1454,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <div class="seg-opt" data-v="dia" onclick="setStatsView('dia')">Dia</div>
       <div class="seg-opt" data-v="semana" onclick="setStatsView('semana')">Semana</div>
       <div class="seg-opt active" data-v="mes" onclick="setStatsView('mes')">Mês</div>
+      <div class="seg-opt" data-v="ano" onclick="setStatsView('ano')">Ano</div>
     </div>
 
     <div class="month-nav" id="statsDayWeekNav" style="display:none;">
@@ -1474,6 +1475,15 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       </div>
       <div><div class="month-nav-label" id="statsLabelMes" onclick="openMonthPicker()">Junho 2026</div></div>
       <div class="month-nav-btn" onclick="changeMonth(1)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="month-nav" id="statsYearNav" style="display:none;">
+      <div class="month-nav-btn" onclick="changeStatsYear(-1)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div><div class="month-nav-label" id="statsLabelAno">2026</div></div>
+      <div class="month-nav-btn" onclick="changeStatsYear(1)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
@@ -1564,7 +1574,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.9.3';
+const APP_VERSION = '2.10.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1611,6 +1621,7 @@ let devTapTimer = null;
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
 let ganhosView = 'mes';
 let statsView = 'mes';
+let statsRefYear = new Date().getFullYear();
 let lucroView = 'mes';
 let lucroRefDate = new Date();
 let ganhosRefDate = new Date();
@@ -2329,7 +2340,8 @@ function lastNMonthKeys(n){
 }
 function monthShortLabel(key){
   const [y,m] = key.split('-').map(Number);
-  return new Date(y, m-1, 1).toLocaleDateString('pt-BR', { month:'short' }).replace('.','');
+  const shortMonth = new Date(y, m-1, 1).toLocaleDateString('pt-BR', { month:'short' }).replace('.','');
+  return `${shortMonth} ${String(y).slice(2)}`;
 }
 function chartBoxWrap(title, sub, inner){
   return `<div class="chart-box">
@@ -2436,11 +2448,17 @@ function setStatsView(v){
   statsView = v;
   document.querySelectorAll('#statsViewSeg .seg-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
   document.getElementById('statsMonthNav').style.display = (v === 'mes') ? 'flex' : 'none';
-  document.getElementById('statsDayWeekNav').style.display = (v === 'mes') ? 'none' : 'flex';
+  document.getElementById('statsYearNav').style.display = (v === 'ano') ? 'flex' : 'none';
+  document.getElementById('statsDayWeekNav').style.display = (v === 'dia' || v === 'semana') ? 'flex' : 'none';
   renderStats();
 }
 function changeStatsDayWeek(delta){
   statsRefDate = addDays(statsRefDate, statsView === 'semana' ? delta*7 : delta);
+  renderStats();
+}
+function changeStatsYear(delta){
+  statsRefYear += delta;
+  document.getElementById('statsLabelAno').textContent = String(statsRefYear);
   renderStats();
 }
 
@@ -2813,12 +2831,11 @@ function renderStatsMonth(){
       const e = ensureMonthEntry(k);
       return e.earnings.reduce((s,x)=>s+(x.amount||0),0);
     });
-    // Labels with year if different years present
-    const years = new Set(monthKeys.map(k=>k.split('-')[0]));
+    // Labels sempre com o ano abreviado, para não gerar ambiguidade
     const mLabels = monthKeys.map(k => {
       const [y,m] = k.split('-').map(Number);
       const shortMonth = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
-      return years.size > 1 ? `${shortMonth} ${String(y).slice(2)}` : shortMonth;
+      return `${shortMonth} ${String(y).slice(2)}`;
     });
     html += chartBoxWrap('Ganhos vs. despesas — últimos meses', 'Verde = ganhos · Vermelho = despesas', groupedBarSVG(mLabels, [
       { name:'Ganhos',   color:'#3E6650', values: ganhosVals },
@@ -2844,9 +2861,138 @@ function renderStatsMonth(){
   box.innerHTML = html;
 }
 
+function renderStatsYear(){
+  const yearLabel = String(statsRefYear);
+  document.getElementById('statsLabelAno').textContent = yearLabel;
+  const box = document.getElementById('statsContent');
+
+  // Agrega os 12 meses do ano selecionado
+  const monthKeysInYear = Array.from({length:12}, (_,i) => `${statsRefYear}-${String(i+1).padStart(2,'0')}`);
+  const entries = monthKeysInYear.map(k => ensureMonthEntry(k));
+  const hasAnyData = entries.some(e => e.earnings.length > 0 || e.variableExpenses.length > 0);
+  if(!hasAnyData){
+    box.innerHTML = `<div class="stats-empty">Ainda não há dados em ${yearLabel}. 📊</div>`;
+    return;
+  }
+
+  let totalUber=0, totalBolt=0, totalPart=0, totalOut=0, combAno=0, varOtherAno=0, fixasAno=0;
+  entries.forEach(e => {
+    totalUber += e.earnings.filter(x=>x.platform==='uber').reduce((s,x)=>s+(x.amount||0),0);
+    totalBolt += e.earnings.filter(x=>x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
+    totalPart += e.earnings.filter(x=>x.platform==='particular').reduce((s,x)=>s+(x.amount||0),0);
+    totalOut  += e.earnings.filter(x=>x.platform==='outros').reduce((s,x)=>s+(x.amount||0),0);
+    combAno     += e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+    varOtherAno += e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+    fixasAno    += totalFixedBills(e);
+  });
+  const brutoTVDE = totalUber + totalBolt;
+  const brutoPart = totalPart + totalOut;
+  const ivaVal    = ivaRate();
+  const comVal    = comissaoRate();
+  const iva       = ivaAmount(brutoTVDE);
+  const com       = comissaoAmount(brutoTVDE);
+  const liquidoTVDE = (brutoTVDE - iva - com) - combAno;
+  const liquido     = liquidoTVDE + brutoPart;
+  const lucroAno    = liquido - fixasAno - varOtherAno;
+
+  // ---- Bloco TVDE ----
+  const tvdeCardsArr = [];
+  if(totalUber>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">${platformBadge('uber',14)} Uber</div><div class="stat-card-value">${fmt(totalUber)}</div></div>`);
+  if(totalBolt>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">${platformBadge('bolt',14)} Bolt</div><div class="stat-card-value">${fmt(totalBolt)}</div></div>`);
+  tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Bruto TVDE</div><div class="stat-card-value">${fmt(brutoTVDE)}</div></div>`);
+  if(ivaVal>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">IVA (${ivaVal}%)</div><div class="stat-card-value negative">− ${fmt(iva)}</div></div>`);
+  if(comVal>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Comissão (${comVal}%)</div><div class="stat-card-value negative">− ${fmt(com)}</div></div>`);
+  if(combAno>0) tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Combustível</div><div class="stat-card-value negative">− ${fmt(combAno)}</div></div>`);
+  tvdeCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Líquido TVDE</div><div class="stat-card-value">${fmt(liquidoTVDE)}</div></div>`);
+  if(tvdeCardsArr.length % 2 === 1){
+    tvdeCardsArr[tvdeCardsArr.length-1] = tvdeCardsArr[tvdeCardsArr.length-1].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+  }
+  let html = `
+  <div class="chart-box" style="margin-bottom:14px;">
+    <div class="chart-box-title">🚖 TVDE — Uber &amp; Bolt</div>
+    <div class="chart-box-sub">${yearLabel}</div>
+    <div class="stat-cards" style="margin-bottom:0;">
+      ${tvdeCardsArr.join('\n      ')}
+    </div>
+  </div>`;
+
+  // ---- Bloco Pessoal ----
+  if(brutoPart > 0){
+    const pessoalCardsArr = [];
+    if(totalPart>0) pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Particular</div><div class="stat-card-value">${fmt(totalPart)}</div></div>`);
+    if(totalOut>0) pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Outros</div><div class="stat-card-value">${fmt(totalOut)}</div></div>`);
+    pessoalCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Total pessoal</div><div class="stat-card-value">${fmt(brutoPart)}</div></div>`);
+    if(pessoalCardsArr.length % 2 === 1){
+      pessoalCardsArr[pessoalCardsArr.length-1] = pessoalCardsArr[pessoalCardsArr.length-1].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+    }
+    html += `
+  <div class="chart-box" style="margin-bottom:14px;">
+    <div class="chart-box-title">🚘 Pessoal — Particular &amp; Outros</div>
+    <div class="chart-box-sub">Sem desconto de IVA · ${yearLabel}</div>
+    <div class="stat-cards" style="margin-bottom:0;">
+      ${pessoalCardsArr.join('\n      ')}
+    </div>
+  </div>`;
+  }
+
+  // ---- Resumo geral ----
+  const resumoCardsArr = [];
+  resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">💧 Líquido total</div><div class="stat-card-value">${fmt(liquido)}</div></div>`);
+  resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Despesas fixas</div><div class="stat-card-value negative">− ${fmt(fixasAno)}</div></div>`);
+  if(varOtherAno>0) resumoCardsArr.push(`<div class="stat-card"><div class="stat-card-label">Outras despesas</div><div class="stat-card-value negative">− ${fmt(varOtherAno)}</div></div>`);
+  resumoCardsArr.push(`<div class="stat-card" style="border-color:var(--vault);"><div class="stat-card-label">💰 Lucro do ano</div><div class="stat-card-value ${lucroAno<0?'negative':''}">${fmt(lucroAno)}</div></div>`);
+  if(resumoCardsArr.length % 2 === 1){
+    const lastIdx = resumoCardsArr.length-1;
+    resumoCardsArr[lastIdx] = resumoCardsArr[lastIdx].includes('style="border-color:var(--vault);"')
+      ? resumoCardsArr[lastIdx].replace('style="border-color:var(--vault);"', 'style="border-color:var(--vault);grid-column:1/-1;"')
+      : resumoCardsArr[lastIdx].replace('class="stat-card"', 'class="stat-card" style="grid-column:1/-1;"');
+  }
+  html += `
+  <div class="chart-box" style="margin-bottom:14px;">
+    <div class="chart-box-title">📊 Resumo do ano</div>
+    <div class="chart-box-sub">${yearLabel}</div>
+    <div class="stat-cards" style="margin-bottom:0;">
+      ${resumoCardsArr.join('\n      ')}
+    </div>
+  </div>`;
+
+  // ---- Gráfico mês a mês (Ganhos vs. Despesas) ----
+  const monthLabels = monthKeysInYear.map(k => {
+    const [y,m] = k.split('-').map(Number);
+    return new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
+  });
+  const monthGanhos = entries.map(e => e.earnings.reduce((s,x)=>s+(x.amount||0),0));
+  const monthDespesas = entries.map(e => {
+    const apps = e.earnings.filter(x=>x.platform==='uber'||x.platform==='bolt').reduce((s,x)=>s+(x.amount||0),0);
+    const comb = e.variableExpenses.filter(x=>x.category==='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+    const varO = e.variableExpenses.filter(x=>x.category!=='combustivel').reduce((s,x)=>s+(x.amount||0),0);
+    return comb + ivaAmount(apps) + comissaoAmount(apps) + totalFixedBills(e) + varO;
+  });
+  html += chartBoxWrap('Ganhos vs. despesas por mês', 'Verde = ganhos · Vermelho = despesas', groupedBarSVG(monthLabels, [
+    { name:'Ganhos',   color:'#3E6650', values: monthGanhos },
+    { name:'Despesas', color:'#C0544A', values: monthDespesas }
+  ]));
+
+  // ---- Despesas por categoria (ano inteiro) ----
+  const categoryTotals = {};
+  entries.forEach(entry => {
+    entry.variableExpenses.forEach(exp => { categoryTotals[exp.category] = (categoryTotals[exp.category]||0) + (exp.amount||0); });
+  });
+  const categoryItems = Object.entries(categoryTotals).filter(([,v])=>v>0).map(([cat,val]) => {
+    const found = EXPENSE_CATEGORIES.find(c => c.key === cat);
+    return { label: found ? `${found.emoji} ${found.label}` : cat, value: val, color:'#C97259' };
+  });
+  if(categoryItems.length){
+    html += chartBoxWrap('Despesas por categoria', 'Totais acumulados no ano', horizontalBarsHTML(categoryItems));
+  }
+
+  box.innerHTML = html;
+}
+
 function renderStats(){
   if(statsView === 'dia') renderStatsDay();
   else if(statsView === 'semana') renderStatsWeek();
+  else if(statsView === 'ano') renderStatsYear();
   else renderStatsMonth();
 }
 
