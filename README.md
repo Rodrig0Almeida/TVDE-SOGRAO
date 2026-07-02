@@ -1,6 +1,6 @@
 # 🚖 Corrida+ (Gestão Financeira para Motoristas TVDE)
 
-O **Corrida+** é um aplicativo web focado na gestão financeira de motoristas de aplicativo (Uber, Bolt e corridas particulares). Projetado com foco na experiência mobile, ele funciona como uma SPA (*Single Page Application*) com visual nativo de aplicativo (estilo iOS).
+O **Corrida+** é um aplicativo web focado na gestão financeira de motoristas de aplicativo (Uber, Bolt e corridas particulares). Projetado com foco na experiência mobile, ele funciona como uma SPA (*Single Page Application*) com visual nativo de aplicativo (estilo iOS). 
 
 O grande diferencial do projeto é sua arquitetura híbrida: ele roda de forma 100% instantânea salvando os dados no dispositivo através do `localStorage` e utiliza uma planilha do **Google Sheets** como banco de dados em nuvem gratuito e sem servidor (Serverless), permitindo sincronizar os seus dados entre vários aparelhos (ex: celular e tablet) em tempo real.
 
