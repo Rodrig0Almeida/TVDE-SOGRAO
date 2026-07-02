@@ -1574,7 +1574,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.10.1';
+const APP_VERSION = '2.10.2';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2309,11 +2309,34 @@ function saveSyncUrl(){
   }, 500);
 }
 async function importFromJson(){
-  const raw = (document.getElementById('importJsonInput')?.value || '').trim();
+  let raw = (document.getElementById('importJsonInput')?.value || '').trim();
   if(!raw){ showToast('Cole o JSON antes de importar'); return; }
+
   let data;
-  try{ data = JSON.parse(raw); }
-  catch(e){ showToast('❌ JSON inválido — verifique o texto colado'); return; }
+  try{
+    data = JSON.parse(raw);
+  }catch(e1){
+    // Tenta normalizar problemas comuns de copiar/colar (iOS smart quotes,
+    // export do Google Sheets com aspas duplicadas, aspas externas extra)
+    let cleaned = raw
+      .replace(/[\u201C\u201D]/g, '"')   // aspas curvas duplas → retas
+      .replace(/[\u2018\u2019]/g, "'");  // aspas curvas simples → retas
+
+    // Se veio envolto em aspas externas (célula do Sheets), remove-as
+    if(cleaned.length > 1 && cleaned[0] === '"' && cleaned[cleaned.length-1] === '"'){
+      cleaned = cleaned.slice(1, -1);
+    }
+    // Desfaz aspas duplicadas ("" → ") típicas de exportação de planilha
+    cleaned = cleaned.replace(/""/g, '"');
+
+    try{
+      data = JSON.parse(cleaned);
+    }catch(e2){
+      showToast('❌ JSON inválido — verifique o texto colado');
+      return;
+    }
+  }
+
   if(!data || typeof data !== 'object' || (!data.bills && !data.monthData)){
     showToast('❌ Formato não reconhecido'); return;
   }
