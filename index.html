@@ -1574,7 +1574,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.10.2';
+const APP_VERSION = '2.11.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1829,6 +1829,20 @@ async function _doCloudSync() {
       throw new Error(`A requisição falhou com o status: ${response.status}`);
     }
     const data = await response.json(); // Apps Script must return ContentService with MimeType.JSON
+
+    // Migração de planilha: se a resposta trouxer um campo "syncUrl" diferente
+    // da URL atual, o app entende que a planilha antiga aponta para uma nova
+    // e troca-se sozinho, sincronizando já com ela. Basta editares a célula A1
+    // da planilha antiga para incluir "syncUrl":"https://nova-url/exec" no JSON.
+    if (data && typeof data.syncUrl === 'string' && data.syncUrl.trim()
+        && data.syncUrl.trim() !== syncUrl) {
+      const newUrl = data.syncUrl.trim();
+      syncUrl = newUrl;
+      try{ await window.storage.set('syncUrl', syncUrl); }catch(e){}
+      showToast('🔄 Migrando para nova planilha…');
+      await _doCloudSync(); // re-sincroniza já com a URL nova
+      return;
+    }
 
     applyCloudData(data);
     await persistLocalOnlySilently();
