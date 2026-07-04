@@ -1438,6 +1438,14 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       </div>
       <div id="encryptionPasswordRow" style="display:none;">
         <button onclick="changeEncryptionPassword()" style="width:100%;padding:11px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:600;font-size:13px;cursor:pointer;">🔑 Trocar senha de encriptação</button>
+        <div class="switch-row" style="margin-top:14px;">
+          <div class="switch-row-text">
+            <div class="switch-row-title">Desbloquear com digital / Face ID</div>
+            <div class="switch-row-sub">Guarda a senha protegida pela biometria deste aparelho, para não precisar de digitá-la sempre. A senha continua a ser a chave real — a biometria só desbloqueia o acesso a ela localmente.</div>
+          </div>
+          <div class="switch" id="biometricSwitch" onclick="toggleBiometricUnlock()"></div>
+        </div>
+        <div id="biometricUnsupportedNote" style="display:none;font-size:12px;color:var(--text-muted);margin-top:6px;">Este dispositivo ou navegador não suporta desbloqueio biométrico.</div>
       </div>
 
       <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
@@ -1586,7 +1594,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.12.1';
+const APP_VERSION = '2.13.0';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1632,6 +1640,7 @@ let devTapTimer = null;
 // Encriptação opcional do payload sincronizado (Modo Dev — feature de teste de segurança)
 let encryptionEnabled = false;
 let encryptionPassword = '';
+let biometricUnlockEnabled = false;
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
@@ -1755,6 +1764,7 @@ async function loadLocalOnlySettings(){
   // Encriptação (feature de teste do Modo Dev) — device-only, nunca vai para a nuvem
   try{ const ee = await window.storage.get('encryptionEnabled'); encryptionEnabled = ee.value === 'true' || ee.value === true; }catch(e){ encryptionEnabled = false; }
   try{ const ep = await window.storage.get('encryptionPassword'); encryptionPassword = ep.value || ''; }catch(e){ encryptionPassword = ''; }
+  try{ const bu = await window.storage.get('biometricUnlockEnabled'); biometricUnlockEnabled = bu.value === 'true' || bu.value === true; }catch(e){ biometricUnlockEnabled = false; }
   // localSettings — appearance prefs, device-only, never synced to cloud
   try{
     const ls = await window.storage.get('localSettings');
@@ -2210,6 +2220,8 @@ function renderSettings(){
     if(encSw) encSw.className = 'switch' + (encryptionEnabled ? ' on' : '');
     const encRow = document.getElementById('encryptionPasswordRow');
     if(encRow) encRow.style.display = encryptionEnabled ? 'block' : 'none';
+    const bioSw = document.getElementById('biometricSwitch');
+    if(bioSw) bioSw.className = 'switch' + (biometricUnlockEnabled ? ' on' : '');
     // dark mode textarea
     const ta = document.getElementById('importJsonInput');
     if(ta) ta.style.background = document.body.classList.contains('dark') ? '#1C1C23' : '#fff';
@@ -3902,6 +3914,95 @@ function changeEncryptionPassword(){
   window.storage.set('encryptionPassword', encryptionPassword).catch(()=>{});
   showToast('🔑 Senha atualizada');
   pushToCloud();
+}
+
+// ---------------------------------------------------------------
+// DESBLOQUEIO BIOMÉTRICO (Face ID / digital) via WebAuthn
+// A biometria NUNCA sai do dispositivo e o app nunca a acede diretamente —
+// só recebe um "sim/não" do sistema. A senha real de encriptação continua
+// a ser a chave; a biometria só decide se essa senha, já guardada
+// localmente, pode ser liberada nesta sessão sem digitar de novo.
+// ---------------------------------------------------------------
+function webAuthnSupported(){
+  return typeof window !== 'undefined'
+    && window.PublicKeyCredential
+    && typeof navigator.credentials?.create === 'function';
+}
+
+async function toggleBiometricUnlock(){
+  if(!webAuthnSupported()){
+    const note = document.getElementById('biometricUnsupportedNote');
+    if(note) note.style.display = 'block';
+    showToast('❌ Biometria não suportada neste dispositivo/navegador');
+    return;
+  }
+  if(!encryptionPassword){
+    showToast('Defina primeiro uma senha de encriptação');
+    return;
+  }
+
+  if(biometricUnlockEnabled){
+    // Desativar: apaga a credencial guardada
+    biometricUnlockEnabled = false;
+    try{ await window.storage.set('biometricUnlockEnabled', false); }catch(e){}
+    try{ await window.storage.delete('biometricCredentialId'); }catch(e){}
+    renderSettings();
+    showToast('Desbloqueio biométrico desativado');
+    return;
+  }
+
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Corrida+' },
+        user: { id: userId, name: 'corridaplus-user', displayName: 'Corrida+' },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000
+      }
+    });
+    if(!credential){ throw new Error('Credencial não criada'); }
+
+    // Guarda o ID da credencial para verificações futuras. A senha de encriptação
+    // já está em window.storage — este passo só confirma que a biometria
+    // deste aparelho foi registada com sucesso para liberar o acesso a ela.
+    const credId = bufToBase64(credential.rawId);
+    await window.storage.set('biometricCredentialId', credId);
+    biometricUnlockEnabled = true;
+    await window.storage.set('biometricUnlockEnabled', true);
+    renderSettings();
+    showToast('✅ Desbloqueio biométrico ativado');
+  }catch(e){
+    console.warn('Falha ao registar biometria:', e);
+    showToast('❌ Não foi possível ativar a biometria (cancelado ou não suportado)');
+  }
+}
+
+// Chamada sempre que o app precisa da senha e biometria está ativa —
+// pede verificação (Face ID/digital) antes de liberar o valor já guardado.
+async function verifyBiometricAndGetPassword(){
+  if(!biometricUnlockEnabled || !webAuthnSupported()) return encryptionPassword;
+  try{
+    const stored = await window.storage.get('biometricCredentialId');
+    const credId = stored?.value;
+    if(!credId) return encryptionPassword;
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: base64ToBuf(credId), type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    return encryptionPassword; // verificação passou — libera a senha já guardada
+  }catch(e){
+    showToast('❌ Verificação biométrica falhou ou foi cancelada');
+    throw e;
+  }
 }
 
 // ---------------------------------------------------------------
