@@ -1428,6 +1428,18 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <button onclick="checkForUpdates()" id="checkUpdateBtn" style="width:100%;padding:13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:700;font-size:14px;cursor:pointer;">🔍 Procurar atualização</button>
       <div id="updateResult" style="margin-top:10px;font-size:13px;text-align:center;color:var(--text-muted);"></div>
 
+      <div class="section-head" style="margin-top:20px;"><div class="section-title">🔒 Encriptação dos dados sincronizados</div></div>
+      <div class="switch-row" style="margin-bottom:8px;">
+        <div class="switch-row-text">
+          <div class="switch-row-title">Encriptar antes de enviar à nuvem</div>
+          <div class="switch-row-sub">Cifra o JSON (AES-GCM 256 bits) antes de gravar na planilha. Quem tiver acesso à célula só vê texto ilegível — só decifra com a senha certa. Feature de teste de segurança.</div>
+        </div>
+        <div class="switch" id="encryptionSwitch" onclick="toggleEncryption()"></div>
+      </div>
+      <div id="encryptionPasswordRow" style="display:none;">
+        <button onclick="changeEncryptionPassword()" style="width:100%;padding:11px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:600;font-size:13px;cursor:pointer;">🔑 Trocar senha de encriptação</button>
+      </div>
+
       <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
       <div class="section-sub" style="margin-bottom:10px;">Se a sincronização automática não funcionar, cole aqui o JSON copiado do Google Sheets para importar os seus dados.</div>
       <textarea id="importJsonInput" placeholder='Cole o JSON aqui… {"bills":[…],"monthData":{…},"profile":{…}}' style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:12px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--ink);resize:vertical;" oninput="this.style.borderColor=''"></textarea>
@@ -1574,7 +1586,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.11.1a';
+const APP_VERSION = '2.12.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1603,7 +1615,7 @@ if (!window.storage) {
 // ---------------------------------------------------------------
 // STATE
 // ---------------------------------------------------------------
-let profile = { name: '', photo: null, vehicle: { type:'combustao', fuelType:'gasolina', consumption:0, price:0 } };
+let profile = { name: '', photo: null };
 
 let bills = [];
 let monthData = {};
@@ -1616,6 +1628,10 @@ let showHiddenData = false;
 let devMode = false;
 let devTapCount = 0;
 let devTapTimer = null;
+
+// Encriptação opcional do payload sincronizado (Modo Dev — feature de teste de segurança)
+let encryptionEnabled = false;
+let encryptionPassword = '';
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
@@ -1736,6 +1752,9 @@ function formatDateStr(dateStr){
 // part of the cloud payload and never triggers a cloud push.
 async function loadLocalOnlySettings(){
   try{ const su = await window.storage.get('syncUrl'); syncUrl = su.value || ''; }catch(e){ syncUrl = ''; }
+  // Encriptação (feature de teste do Modo Dev) — device-only, nunca vai para a nuvem
+  try{ const ee = await window.storage.get('encryptionEnabled'); encryptionEnabled = ee.value === 'true' || ee.value === true; }catch(e){ encryptionEnabled = false; }
+  try{ const ep = await window.storage.get('encryptionPassword'); encryptionPassword = ep.value || ''; }catch(e){ encryptionPassword = ''; }
   // localSettings — appearance prefs, device-only, never synced to cloud
   try{
     const ls = await window.storage.get('localSettings');
@@ -1753,7 +1772,8 @@ async function loadFromLocalStorage(){
   try{ const p  = await window.storage.get('profile');   profile   = JSON.parse(p.value); }catch(e){ profile   = { name:'', photo:null }; }
   try{ const b  = await window.storage.get('bills');     bills     = JSON.parse(b.value); }catch(e){ bills     = []; }
   try{ const md = await window.storage.get('monthData'); monthData = JSON.parse(md.value);}catch(e){ monthData = {}; }
-  ensureVehicleDefaults();
+  // Campo "vehicle" era de uma feature de custo/km removida — limpa resíduos antigos
+  if(profile && profile.vehicle) delete profile.vehicle;
 }
 
 // Applies a JSON payload received from the Google Sheets / Apps Script endpoint.
@@ -1774,7 +1794,8 @@ function applyCloudData(data){
   profile = cloudProfile;
   if(!profile.photo && localPhoto) profile.photo = localPhoto;
   if(profile.photo) syncAllAvatars();
-  ensureVehicleDefaults();
+  // Campo "vehicle" era de uma feature de custo/km removida — limpa resíduos antigos
+  if(profile && profile.vehicle) delete profile.vehicle;
 
   // ── Backward-compat migration ──────────────────────────────────
   // Old data: earnings may have no 'platform' field (default to 'uber')
@@ -1794,10 +1815,6 @@ function applyCloudData(data){
   // Old bills may have no frequency
   bills.forEach(b => { if(!b.frequency) b.frequency = 'mensal'; });
 }
-function ensureVehicleDefaults(){
-  if(!profile.vehicle) profile.vehicle = { type:'combustao', fuelType:'gasolina', consumption:0, price:0 };
-}
-
 // Writes the synced state to localStorage WITHOUT scheduling a new cloud push
 // (used right after a successful cloud GET, to avoid an immediate redundant POST).
 // Note: ivaRate is now part of profile (synced); localSettings = appearance only.
@@ -1830,10 +1847,12 @@ async function _doCloudSync() {
     }
     const data = await response.json(); // Apps Script must return ContentService with MimeType.JSON
 
-    // Migração de planilha: se a resposta trouxer um campo "syncUrl" diferente
-    // da URL atual, o app entende que a planilha antiga aponta para uma nova
-    // e troca-se sozinho, sincronizando já com ela. Basta editares a célula A1
-    // da planilha antiga para incluir "syncUrl":"https://nova-url/exec" no JSON.
+    // Migração de planilha: verificada ANTES de decifrar, de propósito. O campo
+    // "syncUrl" fica sempre em texto plano no topo do JSON — mesmo com a
+    // encriptação ativa — assim continuas a poder editar só esse campo na
+    // célula A1 para migrar de planilha, sem precisar de decifrar/re-encriptar
+    // nada. Basta adicionar "syncUrl":"https://nova-url/exec" fora do bloco
+    // encriptado, algo como: {"encrypted":true,"salt":"...","iv":"...","data":"...","syncUrl":"https://nova-url/exec"}
     if (data && typeof data.syncUrl === 'string' && data.syncUrl.trim()
         && data.syncUrl.trim() !== syncUrl) {
       const newUrl = data.syncUrl.trim();
@@ -1844,7 +1863,26 @@ async function _doCloudSync() {
       return;
     }
 
-    applyCloudData(data);
+    // Se o payload estiver encriptado, decifra usando a senha guardada localmente.
+    // Sem a senha certa, os dados ficam ilegíveis — é exatamente o comportamento
+    // esperado para testar isolamento de segurança na planilha.
+    let decoded = data;
+    if(data && data.encrypted === true){
+      if(!encryptionPassword){
+        showToast('🔒 Dados encriptados — defina a senha no Modo Dev para decifrar');
+        setSyncStatus('nolink');
+        return;
+      }
+      try{
+        decoded = await decryptPayload(data, encryptionPassword);
+      }catch(e){
+        showToast('❌ Senha incorreta — não foi possível decifrar os dados');
+        setSyncStatus('nolink');
+        return;
+      }
+    }
+
+    applyCloudData(decoded);
     await persistLocalOnlySilently();
     setSyncStatus('synced');
     showToast('✅ Sincronizado com sucesso');
@@ -1929,17 +1967,48 @@ function scheduleCloudPush(){
   syncPushTimer = setTimeout(pushToCloud, SYNC_DEBOUNCE_MS);
 }
 
+// Remove entradas de mês que ficaram completamente vazias (sem ganhos,
+// despesas variáveis, overrides, contas pagas ou ocultadas). Estas entradas
+// são criadas automaticamente por ensureMonthEntry() sempre que o utilizador
+// só "passa" por um mês (navegação, gráficos de evolução, visão Ano) — não
+// representam dados reais, então não faz sentido sincronizá-las para a nuvem.
+function pruneEmptyMonths(source){
+  const cleaned = {};
+  Object.keys(source).forEach(key => {
+    const e = source[key] || {};
+    const isEmpty =
+      (!e.earnings || e.earnings.length === 0) &&
+      (!e.variableExpenses || e.variableExpenses.length === 0) &&
+      (!e.billOverrides || Object.keys(e.billOverrides).length === 0) &&
+      (!e.billsPaid || Object.keys(e.billsPaid).length === 0) &&
+      (!e.hiddenBills || Object.keys(e.hiddenBills).length === 0);
+    if(!isEmpty) cleaned[key] = e;
+  });
+  return cleaned;
+}
+
 async function pushToCloud(){
   if(!syncUrl) return;
   // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
   // ivaRate lives in profile and IS synced.
   // profile.photo IS included in the payload so it syncs across devices.
-  const payload = { bills, monthData, profile };
+  // monthData vazio (meses só "visitados", sem dados reais) é removido antes de enviar,
+  // para o JSON na nuvem não crescer com lixo de navegação.
+  const payload = { bills, monthData: pruneEmptyMonths(monthData), profile };
+  let body;
+  try{
+    body = (encryptionEnabled && encryptionPassword)
+      ? JSON.stringify(await encryptPayload(payload, encryptionPassword))
+      : JSON.stringify(payload);
+  }catch(e){
+    console.warn('Falha ao encriptar payload, enviando sem encriptação:', e);
+    body = JSON.stringify(payload);
+  }
   try{
     await fetch(syncUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
+      body
     });
     setSyncStatus('synced');
   }catch(err){
@@ -2121,8 +2190,6 @@ function renderSettings(){
     `).join('');
   }
 
-  renderVehicleSettings();
-
   // IVA rate field
   const ivaEl = document.getElementById('ivaRate');
   if(ivaEl) ivaEl.value = profile.ivaRate || '';
@@ -2139,15 +2206,16 @@ function renderSettings(){
     if(sw) sw.className = 'switch' + (showHiddenData ? ' on' : '');
     const container = document.getElementById('hiddenDataContainer');
     if(container) container.innerHTML = showHiddenData ? renderHiddenDataList() : '';
+    const encSw = document.getElementById('encryptionSwitch');
+    if(encSw) encSw.className = 'switch' + (encryptionEnabled ? ' on' : '');
+    const encRow = document.getElementById('encryptionPasswordRow');
+    if(encRow) encRow.style.display = encryptionEnabled ? 'block' : 'none';
     // dark mode textarea
     const ta = document.getElementById('importJsonInput');
     if(ta) ta.style.background = document.body.classList.contains('dark') ? '#1C1C23' : '#fff';
   }
 }
 
-function renderVehicleSettings(){
-  // Veículo section removed from UI — kept as stub for backward compat
-}
 function updateIvaRate(value){
   profile.ivaRate = parseFloat(value) || 0;
   persistProfile();
@@ -2159,23 +2227,6 @@ function updateComissaoRate(value){
   persistProfile();
   renderGanhos(); renderDespesas();
   showToast(`Comissão ${profile.comissaoRate > 0 ? profile.comissaoRate + '%' : 'desativada'}`);
-}
-function setVehicleType(type){
-  ensureVehicleDefaults();
-  profile.vehicle.type = type;
-  persistProfile();
-  renderVehicleSettings();
-}
-function updateVehicleFuelType(value){
-  ensureVehicleDefaults();
-  profile.vehicle.fuelType = value;
-  persistProfile();
-  renderVehicleSettings();
-}
-function updateVehicleField(field, value){
-  ensureVehicleDefaults();
-  profile.vehicle[field] = parseFloat(value) || 0;
-  persistProfile();
 }
 
 
@@ -2499,26 +2550,6 @@ function changeStatsYear(delta){
   renderStats();
 }
 
-function vehicleCostPerKm(){
-  const v = profile.vehicle;
-  if(!v || !v.price) return null;
-  const consumption = autoCalculatedConsumption() || v.consumption;
-  if(!consumption) return null;
-  return v.price / consumption;
-}
-function autoCalculatedConsumption(){
-  // Auto-calculate consumption: total km / total fuel amount (liters/m³) in variable expenses
-  let totalKmAll = 0, totalFuelLiters = 0;
-  Object.keys(monthData).forEach(k => {
-    const e = ensureMonthEntry(k);
-    totalKmAll += e.earnings.reduce((s, it) => s + (it.km || 0), 0);
-    e.variableExpenses.forEach(exp => {
-      if(exp.category === 'combustivel' && exp.liters) totalFuelLiters += exp.liters;
-    });
-  });
-  if(totalKmAll > 0 && totalFuelLiters > 0) return totalKmAll / totalFuelLiters;
-  return null;
-}
 function ivaAmount(grossEarnings){
   const rate = parseFloat(profile.ivaRate) || 0;
   return grossEarnings * (rate / 100);
@@ -2570,39 +2601,6 @@ function computeLiquidoFromEntry(entry){
 // Cards shared by the Dia/Semana/Mês stat views: efficiency (R$/km, R$/hora),
 // estimated vs. actual fuel cost (using the vehicle settings from "Você"),
 // and net profit for the period.
-function uberMetricsHTML(items, expenses, extraDeduction){
-  extraDeduction = extraDeduction || 0;
-  const apps  = items.filter(e=>e.platform==='uber'||e.platform==='bolt').reduce((s,e)=>s+(e.amount||0),0);
-  const part  = items.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
-  const comb  = expenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const varOther = expenses.filter(e=>e.category!=='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const km    = sumKm(items);
-  const hours = sumHours(items);
-  const iva   = ivaAmount(apps);
-  const com   = comissaoAmount(apps);
-  const liquido = (apps - iva - com) - comb + part;
-  const lucro = liquido - varOther - extraDeduction;
-  // Metrics use NET (post-IVA) to be more truthful
-  const liquidoKm  = km > 0 ? liquido / km : null;
-  const liquidoHora= hours > 0 ? liquido / hours : null;
-  const lucroKm    = km > 0 ? lucro / km : null;
-  const lucroHora  = hours > 0 ? lucro / hours : null;
-  const gastoCombustivelReal = expenses.filter(e=>e.category==='combustivel').reduce((s,e)=>s+(e.amount||0),0);
-  const custoPorKm = vehicleCostPerKm();
-  const custoEstimado = custoPorKm !== null ? custoPorKm * km : null;
-
-  let cards = '';
-  if(liquidoKm !== null)  cards += `<div class="stat-card"><div class="stat-card-label">Líquido / km</div><div class="stat-card-value">${fmt(liquidoKm)}</div></div>`;
-  if(liquidoHora !== null) cards += `<div class="stat-card"><div class="stat-card-label">Líquido / hora</div><div class="stat-card-value">${fmt(liquidoHora)}</div></div>`;
-  if(lucroKm !== null)    cards += `<div class="stat-card"><div class="stat-card-label">Lucro / km</div><div class="stat-card-value ${lucroKm<0?'negative':''}">${fmt(lucroKm)}</div></div>`;
-  if(lucroHora !== null)  cards += `<div class="stat-card"><div class="stat-card-label">Lucro / hora</div><div class="stat-card-value ${lucroHora<0?'negative':''}">${fmt(lucroHora)}</div></div>`;
-
-  if(custoEstimado !== null || gastoCombustivelReal > 0){
-    cards += `<div class="stat-card"><div class="stat-card-label">Combustível real</div><div class="stat-card-value" style="font-size:14px;">${fmt(gastoCombustivelReal)}${custoEstimado!==null ? `<span style="font-size:10px;color:var(--text-muted);display:block;">est. ${fmt(custoEstimado)}</span>` : ''}</div></div>`;
-  }
-  return cards ? `<div class="stat-cards">${cards}</div>` : '';
-}
-
 function renderStatsDay(){
   const dateIso = isoDate(statsRefDate);
   const isToday = dateIso === isoDate(new Date());
@@ -3637,7 +3635,6 @@ async function confirmNewExpense(){
   if(liters > 0) exp.liters = liters;
   entry.variableExpenses.push(exp);
   await persistMonthData(); closeSheet(); showToast('Despesa registrada'); renderDespesas();
-  renderVehicleSettings(); // refresh auto-consumption display
 }
 async function deleteVariableExpense(id){
   if(!confirm('Remover esta despesa?')) return;
@@ -3830,6 +3827,81 @@ function renderMonthSummary(entry){
   const b = document.getElementById('monthSummaryDespesas');
   if(a) a.innerHTML = html;
   if(b) b.innerHTML = html;
+}
+
+// ---------------------------------------------------------------
+// ENCRIPTAÇÃO OPCIONAL DO PAYLOAD SINCRONIZADO (Modo Dev)
+// AES-GCM 256 bits via Web Crypto API nativa do browser — sem dependências
+// externas. A senha nunca é enviada; só a chave derivada localmente (PBKDF2)
+// é usada para cifrar/decifrar. Sem a senha certa, o conteúdo da célula A1
+// da planilha é ilegível (apenas texto cifrado em base64).
+// ---------------------------------------------------------------
+async function deriveKeyFromPassword(password, saltBytes){
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+function bufToBase64(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function base64ToBuf(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+async function encryptPayload(obj, password){
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKeyFromPassword(password, salt);
+  const plaintext = enc.encode(JSON.stringify(obj));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  return {
+    encrypted: true,
+    salt: bufToBase64(salt),
+    iv: bufToBase64(iv),
+    data: bufToBase64(ciphertext)
+  };
+}
+async function decryptPayload(envelope, password){
+  const dec = new TextDecoder();
+  const salt = base64ToBuf(envelope.salt);
+  const iv   = base64ToBuf(envelope.iv);
+  const key  = await deriveKeyFromPassword(password, salt);
+  const ciphertext = base64ToBuf(envelope.data);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  return JSON.parse(dec.decode(plaintext));
+}
+
+function toggleEncryption(){
+  encryptionEnabled = !encryptionEnabled;
+  if(encryptionEnabled && !encryptionPassword){
+    const pwd = prompt('Defina uma senha para encriptar os dados sincronizados:\n(Guarde-a bem — sem ela, não há como decifrar os dados na planilha.)');
+    if(!pwd){ encryptionEnabled = false; renderSettings(); return; }
+    encryptionPassword = pwd;
+  }
+  window.storage.set('encryptionEnabled', encryptionEnabled).catch(()=>{});
+  window.storage.set('encryptionPassword', encryptionPassword).catch(()=>{});
+  renderSettings();
+  showToast(encryptionEnabled ? '🔒 Encriptação ativada' : '🔓 Encriptação desativada');
+  pushToCloud();
+}
+function changeEncryptionPassword(){
+  const pwd = prompt('Nova senha de encriptação:\n(Isto vai re-encriptar os dados na próxima sincronização.)');
+  if(!pwd) return;
+  encryptionPassword = pwd;
+  window.storage.set('encryptionPassword', encryptionPassword).catch(()=>{});
+  showToast('🔑 Senha atualizada');
+  pushToCloud();
 }
 
 // ---------------------------------------------------------------
