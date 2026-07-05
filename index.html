@@ -1446,6 +1446,13 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
           <div class="switch" id="biometricSwitch" onclick="toggleBiometricUnlock()"></div>
         </div>
         <div id="biometricUnsupportedNote" style="display:none;font-size:12px;color:var(--text-muted);margin-top:6px;">Este dispositivo ou navegador não suporta desbloqueio biométrico.</div>
+        <div class="switch-row" style="margin-top:14px;">
+          <div class="switch-row-text">
+            <div class="switch-row-title">Pedir confirmação a cada sincronização</div>
+            <div class="switch-row-sub">Se ativado, o app sempre pede senha ou biometria antes de decifrar, mesmo já sabendo a senha. Se desativado, decifra automaticamente em segundo plano usando a senha já guardada neste aparelho.</div>
+          </div>
+          <div class="switch" id="requireUnlockSwitch" onclick="toggleRequireUnlockEachSync()"></div>
+        </div>
       </div>
 
       <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
@@ -1594,7 +1601,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.13.0';
+const APP_VERSION = '2.15.0';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1641,6 +1648,7 @@ let devTapTimer = null;
 let encryptionEnabled = false;
 let encryptionPassword = '';
 let biometricUnlockEnabled = false;
+let requireUnlockEachSync = false;
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
@@ -1765,6 +1773,7 @@ async function loadLocalOnlySettings(){
   try{ const ee = await window.storage.get('encryptionEnabled'); encryptionEnabled = ee.value === 'true' || ee.value === true; }catch(e){ encryptionEnabled = false; }
   try{ const ep = await window.storage.get('encryptionPassword'); encryptionPassword = ep.value || ''; }catch(e){ encryptionPassword = ''; }
   try{ const bu = await window.storage.get('biometricUnlockEnabled'); biometricUnlockEnabled = bu.value === 'true' || bu.value === true; }catch(e){ biometricUnlockEnabled = false; }
+  try{ const ru = await window.storage.get('requireUnlockEachSync'); requireUnlockEachSync = ru.value === 'true' || ru.value === true; }catch(e){ requireUnlockEachSync = false; }
   // localSettings — appearance prefs, device-only, never synced to cloud
   try{
     const ls = await window.storage.get('localSettings');
@@ -1873,43 +1882,118 @@ async function _doCloudSync() {
       return;
     }
 
-    // Se o payload estiver encriptado, decifra usando a senha guardada localmente.
-    // Sem a senha certa, os dados ficam ilegíveis — é exatamente o comportamento
-    // esperado para testar isolamento de segurança na planilha.
-    let decoded = data;
+    // Se o payload estiver encriptado, o comportamento depende da opção
+    // "Pedir confirmação a cada sincronização":
+    // - LIGADA: sempre mostra o sheet de desbloqueio (senha ou biometria).
+    // - DESLIGADA (padrão): se já há uma senha guardada neste aparelho,
+    //   decifra automaticamente em segundo plano, sem interromper o utilizador.
+    //   Se não houver senha guardada ainda, mostra o sheet mesmo assim
+    //   (não há como decifrar sem pedir a senha pela primeira vez).
     if(data && data.encrypted === true){
-      if(!encryptionPassword){
-        showToast('🔒 Dados encriptados — defina a senha no Modo Dev para decifrar');
-        setSyncStatus('nolink');
-        return;
+      if(!requireUnlockEachSync && encryptionPassword){
+        try{
+          const decoded = await decryptPayload(data, encryptionPassword);
+          await finishCloudSync(decoded);
+          return;
+        }catch(e){
+          // Senha guardada não bate mais (ex: trocada noutro aparelho) — pede de novo
+          pendingEncryptedPayload = data;
+          openUnlockSheet();
+          return;
+        }
       }
-      try{
-        decoded = await decryptPayload(data, encryptionPassword);
-      }catch(e){
-        showToast('❌ Senha incorreta — não foi possível decifrar os dados');
-        setSyncStatus('nolink');
-        return;
-      }
+      pendingEncryptedPayload = data;
+      openUnlockSheet();
+      return;
     }
 
-    applyCloudData(decoded);
-    await persistLocalOnlySilently();
-    setSyncStatus('synced');
-    showToast('✅ Sincronizado com sucesso');
-
-    // Refresh the current view
-    const activeScreenId = document.querySelector('.screen.active')?.id;
-    if (activeScreenId === 'screen-despesas') renderDespesas();
-    else if (activeScreenId === 'screen-stats') renderStats();
-    else if (activeScreenId === 'screen-lucro') renderLucro();
-    else if (activeScreenId === 'screen-settings') renderSettings();
-    else renderGanhos(); // Default refresh
+    await finishCloudSync(data);
   } catch (error) {
     console.error('Falha na sincronização com a nuvem:', error);
     setSyncStatus('nolink');
     showToast('❌ Falha na sincronização');
   }
 }
+
+// Concluído o desbloqueio (ou se não havia encriptação), aplica os dados normalmente.
+async function finishCloudSync(decoded){
+  applyCloudData(decoded);
+  await persistLocalOnlySilently();
+  setSyncStatus('synced');
+  showToast('✅ Sincronizado com sucesso');
+
+  // Refresh the current view
+  const activeScreenId = document.querySelector('.screen.active')?.id;
+  if (activeScreenId === 'screen-despesas') renderDespesas();
+  else if (activeScreenId === 'screen-stats') renderStats();
+  else if (activeScreenId === 'screen-lucro') renderLucro();
+  else if (activeScreenId === 'screen-settings') renderSettings();
+  else renderGanhos(); // Default refresh
+}
+
+let pendingEncryptedPayload = null;
+
+function openUnlockSheet(){
+  const canBio = biometricUnlockEnabled && webAuthnSupported();
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔒 Dados encriptados</div>
+    <div class="sheet-sub">Confirme para decifrar e sincronizar os seus dados.</div>
+    ${canBio ? `
+      <button onclick="unlockWithBiometric()" style="width:100%;margin-top:16px;padding:14px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:15px;cursor:pointer;">👤 Desbloquear com Face ID / digital</button>
+      <div style="text-align:center;font-size:12px;color:var(--text-muted);margin:12px 0;">ou</div>
+    ` : ''}
+    <div class="field">
+      <label>Senha de encriptação</label>
+      <input type="password" id="unlockPasswordInput" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') unlockWithPassword()" />
+    </div>
+    <button onclick="unlockWithPassword()" style="width:100%;margin-top:6px;padding:14px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:700;font-size:15px;cursor:pointer;">Desbloquear com senha</button>
+    <button onclick="cancelUnlock()" style="width:100%;margin-top:10px;padding:12px;border:none;background:none;color:var(--text-muted);font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>
+  `);
+  setTimeout(()=>{ document.getElementById('unlockPasswordInput')?.focus(); }, 200);
+}
+
+function cancelUnlock(){
+  pendingEncryptedPayload = null;
+  closeSheet();
+  setSyncStatus('nolink');
+  showToast('Sincronização cancelada');
+}
+
+async function unlockWithPassword(){
+  const input = document.getElementById('unlockPasswordInput');
+  const pwd = input ? input.value : '';
+  if(!pwd){ showToast('Digite a senha'); return; }
+  const envelope = pendingEncryptedPayload;
+  if(!envelope) { closeSheet(); return; }
+  try{
+    const decoded = await decryptPayload(envelope, pwd);
+    // Senha confirmada — guarda para próximas vezes nesta sessão/dispositivo
+    encryptionPassword = pwd;
+    try{ await window.storage.set('encryptionPassword', encryptionPassword); }catch(e){}
+    pendingEncryptedPayload = null;
+    closeSheet();
+    await finishCloudSync(decoded);
+  }catch(e){
+    showToast('❌ Senha incorreta');
+    if(input) input.style.borderColor = 'var(--terracotta)';
+  }
+}
+
+async function unlockWithBiometric(){
+  const envelope = pendingEncryptedPayload;
+  if(!envelope){ closeSheet(); return; }
+  try{
+    const pwd = await verifyBiometricAndGetPassword();
+    const decoded = await decryptPayload(envelope, pwd);
+    pendingEncryptedPayload = null;
+    closeSheet();
+    await finishCloudSync(decoded);
+  }catch(e){
+    showToast('❌ Verificação biométrica falhou');
+  }
+}
+
 
 async function loadAll(){
   const splashMsg = document.getElementById('splashMsg');
@@ -2222,6 +2306,8 @@ function renderSettings(){
     if(encRow) encRow.style.display = encryptionEnabled ? 'block' : 'none';
     const bioSw = document.getElementById('biometricSwitch');
     if(bioSw) bioSw.className = 'switch' + (biometricUnlockEnabled ? ' on' : '');
+    const reqSw = document.getElementById('requireUnlockSwitch');
+    if(reqSw) reqSw.className = 'switch' + (requireUnlockEachSync ? ' on' : '');
     // dark mode textarea
     const ta = document.getElementById('importJsonInput');
     if(ta) ta.style.background = document.body.classList.contains('dark') ? '#1C1C23' : '#fff';
@@ -3979,6 +4065,13 @@ async function toggleBiometricUnlock(){
     console.warn('Falha ao registar biometria:', e);
     showToast('❌ Não foi possível ativar a biometria (cancelado ou não suportado)');
   }
+}
+
+async function toggleRequireUnlockEachSync(){
+  requireUnlockEachSync = !requireUnlockEachSync;
+  try{ await window.storage.set('requireUnlockEachSync', requireUnlockEachSync); }catch(e){}
+  renderSettings();
+  showToast(requireUnlockEachSync ? '🔒 Vai pedir confirmação a cada sincronização' : '🔓 Decifra automaticamente em segundo plano');
 }
 
 // Chamada sempre que o app precisa da senha e biometria está ativa —
