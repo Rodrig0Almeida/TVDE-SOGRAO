@@ -1601,7 +1601,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.15.0';
+const APP_VERSION = '2.15.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1935,19 +1935,41 @@ let pendingEncryptedPayload = null;
 
 function openUnlockSheet(){
   const canBio = biometricUnlockEnabled && webAuthnSupported();
+  if(canBio){
+    // Biometria tem prioridade: dispara direto, sem mostrar tela de escolha.
+    // Só cai para o sheet de senha se a biometria falhar/for cancelada.
+    triggerBiometricUnlockDirectly();
+    return;
+  }
+  openUnlockPasswordSheet();
+}
+
+async function triggerBiometricUnlockDirectly(){
+  const envelope = pendingEncryptedPayload;
+  if(!envelope) return;
+  try{
+    const pwd = await verifyBiometricAndGetPassword();
+    const decoded = await decryptPayload(envelope, pwd);
+    pendingEncryptedPayload = null;
+    await finishCloudSync(decoded);
+  }catch(e){
+    // Biometria falhou, foi cancelada, ou a senha guardada não bate mais —
+    // cai para o sheet com senha como alternativa.
+    openUnlockPasswordSheet(true);
+  }
+}
+
+function openUnlockPasswordSheet(biometricFailed){
   openSheet(`
     <div class="sheet-handle"></div>
     <div class="sheet-title">🔒 Dados encriptados</div>
-    <div class="sheet-sub">Confirme para decifrar e sincronizar os seus dados.</div>
-    ${canBio ? `
-      <button onclick="unlockWithBiometric()" style="width:100%;margin-top:16px;padding:14px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:15px;cursor:pointer;">👤 Desbloquear com Face ID / digital</button>
-      <div style="text-align:center;font-size:12px;color:var(--text-muted);margin:12px 0;">ou</div>
-    ` : ''}
-    <div class="field">
+    <div class="sheet-sub">${biometricFailed ? 'Não foi possível usar a biometria. Confirme com a senha para continuar.' : 'Confirme a senha para decifrar e sincronizar os seus dados.'}</div>
+    <div class="field" style="margin-top:12px;">
       <label>Senha de encriptação</label>
       <input type="password" id="unlockPasswordInput" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') unlockWithPassword()" />
     </div>
-    <button onclick="unlockWithPassword()" style="width:100%;margin-top:6px;padding:14px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:700;font-size:15px;cursor:pointer;">Desbloquear com senha</button>
+    <button onclick="unlockWithPassword()" style="width:100%;margin-top:6px;padding:14px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:15px;cursor:pointer;">Desbloquear com senha</button>
+    ${biometricUnlockEnabled && webAuthnSupported() ? `<button onclick="triggerBiometricUnlockDirectly(); closeSheet();" style="width:100%;margin-top:10px;padding:12px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:600;font-size:13px;cursor:pointer;">👤 Tentar biometria de novo</button>` : ''}
     <button onclick="cancelUnlock()" style="width:100%;margin-top:10px;padding:12px;border:none;background:none;color:var(--text-muted);font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>
   `);
   setTimeout(()=>{ document.getElementById('unlockPasswordInput')?.focus(); }, 200);
@@ -1977,20 +1999,6 @@ async function unlockWithPassword(){
   }catch(e){
     showToast('❌ Senha incorreta');
     if(input) input.style.borderColor = 'var(--terracotta)';
-  }
-}
-
-async function unlockWithBiometric(){
-  const envelope = pendingEncryptedPayload;
-  if(!envelope){ closeSheet(); return; }
-  try{
-    const pwd = await verifyBiometricAndGetPassword();
-    const decoded = await decryptPayload(envelope, pwd);
-    pendingEncryptedPayload = null;
-    closeSheet();
-    await finishCloudSync(decoded);
-  }catch(e){
-    showToast('❌ Verificação biométrica falhou');
   }
 }
 
