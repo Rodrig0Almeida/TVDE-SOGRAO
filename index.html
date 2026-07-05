@@ -1187,13 +1187,26 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 @media (min-width: 860px) and (max-width: 1199px) {
   .tabbar { width: 280px; }
 }
+
+#splashScreen { background: var(--vault); }
+#splashScreen .splash-title { color: #F6EFE2; }
+#splashScreen .splash-msg { color: rgba(246,239,226,0.55); }
+@media (prefers-color-scheme: dark) {
+  #splashScreen {
+    background: #16161B;
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(184,134,43,0.09), transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(31,58,46,0.12), transparent 40%);
+  }
+  #splashScreen .splash-title { color: #F0EDE6; }
+  #splashScreen .splash-msg { color: rgba(230,225,215,0.62); }
+}
 </style>
 </head>
 <body>
 
 <div id="splashScreen" style="
   position:fixed;inset:0;
-  background:var(--vault);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   z-index:999;
   transition:opacity 0.5s ease;
@@ -1207,8 +1220,8 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
       <circle cx="36" cy="31" r="6" fill="#1F3A2E" stroke="#D9A949" stroke-width="2.5"/>
     </g>
   </svg>
-  <div style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;color:#F6EFE2;letter-spacing:-0.01em;">Corrida+</div>
-  <div id="splashMsg" style="font-size:12px;color:rgba(246,239,226,0.55);margin-top:10px;font-weight:500;">A carregar…</div>
+  <div class="splash-title" style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;letter-spacing:-0.01em;">Corrida+</div>
+  <div id="splashMsg" class="splash-msg" style="font-size:12px;margin-top:10px;font-weight:500;">A carregar…</div>
 </div>
 
 <div class="app" id="app">
@@ -1601,7 +1614,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.15.1';
+const APP_VERSION = '2.15.2';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
