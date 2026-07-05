@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Corrida+" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="theme-color" content="#1F3A2E" id="themeColorMeta" />
+<meta name="theme-color" content="#1F3A2E" id="themeColorMeta" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#16161B" id="themeColorMetaDark" media="(prefers-color-scheme: dark)" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -1614,7 +1615,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.15.2a';
+const APP_VERSION = '2.15.3';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2217,11 +2218,12 @@ async function setThemeColor(key){
 // Keeps the browser/OS chrome (iOS status bar, Android address bar) in sync
 // with the current theme color and light/dark mode.
 function updateThemeColorMeta(){
-  const meta = document.getElementById('themeColorMeta');
-  if(!meta) return;
+  const metaLight = document.getElementById('themeColorMeta');
+  const metaDark  = document.getElementById('themeColorMetaDark');
   const isDark = document.body.classList.contains('dark');
   const theme  = THEME_COLORS.find(t => t.key === (localSettings.themeColor || 'green')) || THEME_COLORS[0];
-  meta.setAttribute('content', isDark ? '#111114' : theme.vault);
+  if(metaLight) metaLight.setAttribute('content', isDark ? '#111114' : theme.vault);
+  if(metaDark)  metaDark.setAttribute('content', isDark ? '#111114' : theme.vault);
 }
 
 function applyDarkModeClass(){
