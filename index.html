@@ -1654,7 +1654,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.17.0';
+const APP_VERSION = '2.17.1';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2003,7 +2003,15 @@ async function _doCloudSync() {
       logSyncEvent('timeout', `Tempo esgotado após ${(SYNC_TIMEOUT_MS/1000).toFixed(0)}s — a ligação com a planilha está lenta`, `${elapsedMs}ms`);
       showToast(`⏱️ Sincronização demorou demais (>${(SYNC_TIMEOUT_MS/1000).toFixed(0)}s) — tente novamente`);
     } else {
-      logSyncEvent('error', error.message || 'Erro desconhecido', `${elapsedMs}ms`);
+      // "Load failed" / "Failed to fetch" em poucos ms (sem chegar a esperar
+      // rede) geralmente indica: CORS bloqueado pelo Apps Script, URL inválida/
+      // não publicada, ou certificado/DNS com problema — não lentidão de rede.
+      let host = '?';
+      try{ host = new URL(syncUrl).host; }catch(e){}
+      const hint = elapsedMs < 200
+        ? ' (falhou rápido demais para ser lentidão de rede — provavelmente CORS, URL errada, ou o Apps Script não está publicado como "Qualquer pessoa")'
+        : '';
+      logSyncEvent('error', `${error.name || 'Error'}: ${error.message || 'Erro desconhecido'}${hint}`, `${elapsedMs}ms · host: ${host}`);
       console.error('Falha na sincronização com a nuvem:', error);
       showToast('❌ Falha na sincronização');
     }
