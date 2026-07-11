@@ -1240,6 +1240,31 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
   <div id="hackLines" style="font-size:13px;line-height:1.7;white-space:pre-wrap;"></div>
 </div>
 
+<!-- Mensagem de aniversário — só 19/10 para o perfil ARTHUR SANTOS -->
+<div id="birthdayScreen" style="
+  position:fixed;inset:0;
+  background:linear-gradient(160deg, #1F3A2E, #2C4F3D);
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  z-index:1000;
+  padding:24px;
+  overflow:hidden;
+  text-align:center;
+" onclick="closeBirthdayScreen()">
+  <div id="birthdayConfetti" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+  <div style="font-size:64px;margin-bottom:16px;">🎉🎂🎉</div>
+  <div style="font-family:'Fraunces',serif;font-weight:700;font-size:32px;color:#F6EFE2;letter-spacing:-0.01em;">Feliz Aniversário!</div>
+  <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:#D9A949;margin-top:6px;" id="birthdayNameDisplay">Arthur Santos</div>
+  <div style="font-size:14px;color:rgba(246,239,226,0.75);margin-top:18px;max-width:280px;">Que este novo ano de estrada traga muitas corridas boas e ainda mais lucro líquido 🚖💚</div>
+</div>
+
+<style>
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+</style>
+
 <div class="app" id="app">
 
   <div class="screen" id="screen-ganhos">
@@ -1484,6 +1509,14 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
         </div>
       </div>
 
+      <div class="section-head" style="margin-top:20px;"><div class="section-title">🔗 Migrar planilha</div></div>
+      <div class="section-sub" style="margin-bottom:10px;">Cole a URL de uma nova planilha e envie. A URL é gravada uma única vez na planilha atual — qualquer dispositivo que sincronizar com ela (incluindo este) muda sozinho para a nova.</div>
+      <div class="field">
+        <label>Nova URL de sincronização</label>
+        <input type="text" id="migrationUrlInput" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <button onclick="scheduleMigrationUrl()" style="width:100%;padding:13px;border-radius:var(--r-md);border:none;background:var(--vault);color:#fff;font-weight:700;font-size:14px;cursor:pointer;">🔄 Enviar URL de migração</button>
+
       <div class="section-head" style="margin-top:20px;"><div class="section-title">📋 Log de sincronização</div></div>
       <div class="section-sub" style="margin-bottom:10px;">Últimos eventos de sincronização (sucesso, erro, tempo esgotado) — útil para perceber se um problema é do app, da rede, ou da planilha estar lenta.</div>
       <div id="syncLogContainer" style="max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-md);padding:2px;"></div>
@@ -1507,6 +1540,15 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
           onchange="setEasterEggRate(this.value)" />
       </div>
       <button onclick="toggleForceEasterEgg()" id="forceEasterEggBtn" style="width:100%;margin-top:8px;padding:13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:700;font-size:14px;cursor:pointer;">🎭 Forçar na próxima abertura</button>
+
+      <div class="section-head" style="margin-top:20px;"><div class="section-title">🎂 Mensagem de aniversário</div></div>
+      <div class="section-sub" style="margin-bottom:10px;">Aparece automaticamente na data configurada, com confetes e o nome atual do perfil. Sincronizado via nuvem.</div>
+      <div class="field">
+        <label>Dia e mês</label>
+        <input type="text" id="birthdayDateInput" placeholder="DD-MM (ex: 19-10)" inputmode="numeric" maxlength="5"
+          onchange="setBirthdayDate(this.value)" />
+      </div>
+      <button onclick="toggleForceBirthday()" id="forceBirthdayBtn" style="width:100%;padding:13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:700;font-size:14px;cursor:pointer;">🎉 Forçar na próxima abertura</button>
 
       <div class="section-head" style="margin-top:20px;"><div class="section-title">📥 Importar dados</div></div>
       <div class="section-sub" style="margin-bottom:10px;">Se a sincronização automática não funcionar, cole aqui o JSON copiado do Google Sheets para importar os seus dados.</div>
@@ -1654,7 +1696,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '2.17.1';
+const APP_VERSION = '3.0.0';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1722,6 +1764,10 @@ function logSyncEvent(type, message, extra){
   if(syncLog.length > SYNC_LOG_MAX) syncLog.length = SYNC_LOG_MAX;
   try{ window.storage.set('syncLog', JSON.stringify(syncLog)); }catch(e){}
 }
+
+// (Migração de planilha agora é enviada diretamente por scheduleMigrationUrl(),
+// sem estado persistido — evita o campo "syncUrl" ficar preso e reenviado
+// em pushes futuros depois de reiniciar o app.)
 
 // Ganhos / Estatísticas can be viewed by Dia, Semana or Mês. These two only
 // matter for the 'dia'/'semana' views — 'mes' keeps using currentMonthKey.
@@ -1929,8 +1975,10 @@ function hideLoadingState(){
 }
 
 const SYNC_TIMEOUT_MS = 15000;
+const SYNC_MAX_RETRIES = 2; // total de 3 tentativas (1 original + 2 retries)
 
-async function _doCloudSync() {
+async function _doCloudSync(attempt) {
+  attempt = attempt || 1;
   if (!syncUrl) {
     setSyncStatus('nolink');
     return;
@@ -1998,23 +2046,34 @@ async function _doCloudSync() {
   } catch (error) {
     clearTimeout(timeoutId);
     const elapsedMs = Date.now() - startTime;
-    setSyncStatus('nolink');
+
     if(error.name === 'AbortError'){
-      logSyncEvent('timeout', `Tempo esgotado após ${(SYNC_TIMEOUT_MS/1000).toFixed(0)}s — a ligação com a planilha está lenta`, `${elapsedMs}ms`);
+      setSyncStatus('nolink');
+      logSyncEvent('timeout', `Tempo esgotado após ${(SYNC_TIMEOUT_MS/1000).toFixed(0)}s — a ligação com a planilha está lenta`, `${elapsedMs}ms · tentativa ${attempt}`);
       showToast(`⏱️ Sincronização demorou demais (>${(SYNC_TIMEOUT_MS/1000).toFixed(0)}s) — tente novamente`);
-    } else {
-      // "Load failed" / "Failed to fetch" em poucos ms (sem chegar a esperar
-      // rede) geralmente indica: CORS bloqueado pelo Apps Script, URL inválida/
-      // não publicada, ou certificado/DNS com problema — não lentidão de rede.
-      let host = '?';
-      try{ host = new URL(syncUrl).host; }catch(e){}
-      const hint = elapsedMs < 200
-        ? ' (falhou rápido demais para ser lentidão de rede — provavelmente CORS, URL errada, ou o Apps Script não está publicado como "Qualquer pessoa")'
-        : '';
-      logSyncEvent('error', `${error.name || 'Error'}: ${error.message || 'Erro desconhecido'}${hint}`, `${elapsedMs}ms · host: ${host}`);
-      console.error('Falha na sincronização com a nuvem:', error);
-      showToast('❌ Falha na sincronização');
+      return;
     }
+
+    // "Load failed" / "Failed to fetch" em poucos ms é típico de rate-limiting
+    // ou "cold start" intermitente do Apps Script — nesses casos vale a pena
+    // tentar de novo automaticamente antes de desistir e mostrar erro.
+    const looksTransient = elapsedMs < 500;
+    if(looksTransient && attempt <= SYNC_MAX_RETRIES){
+      const backoffMs = attempt * 800; // 800ms, depois 1600ms
+      logSyncEvent('info', `Falha rápida (${error.message || error.name}) — a tentar de novo em ${backoffMs}ms`, `tentativa ${attempt} de ${SYNC_MAX_RETRIES+1}`);
+      await new Promise(r => setTimeout(r, backoffMs));
+      return _doCloudSync(attempt + 1);
+    }
+
+    setSyncStatus('nolink');
+    let host = '?';
+    try{ host = new URL(syncUrl).host; }catch(e){}
+    const hint = looksTransient
+      ? ` — falhou rápido mesmo após ${attempt} tentativas; provavelmente CORS, URL errada, ou a implantação do Apps Script não está publicada como "Qualquer pessoa"`
+      : '';
+    logSyncEvent('error', `${error.name || 'Error'}: ${error.message || 'Erro desconhecido'}${hint}`, `${elapsedMs}ms · host: ${host} · tentativa ${attempt}`);
+    console.error('Falha na sincronização com a nuvem:', error);
+    showToast('❌ Falha na sincronização');
   }
 }
 
@@ -2194,7 +2253,7 @@ function pruneEmptyMonths(source){
   return cleaned;
 }
 
-async function pushToCloud(){
+async function pushToCloud(migrationUrl){
   if(!syncUrl) return;
   // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
   // ivaRate lives in profile and IS synced.
@@ -2202,6 +2261,13 @@ async function pushToCloud(){
   // monthData vazio (meses só "visitados", sem dados reais) é removido antes de enviar,
   // para o JSON na nuvem não crescer com lixo de navegação.
   const payload = { bills, monthData: pruneEmptyMonths(monthData), profile };
+  // Migração de planilha: só incluída quando explicitamente passada por
+  // scheduleMigrationUrl(). Não é guardada em nenhum estado persistido, então
+  // não há risco de ficar "presa" e ser reenviada em pushes futuros depois
+  // de reiniciar o app — é enviada uma única vez, neste push específico.
+  if(migrationUrl){
+    payload.syncUrl = migrationUrl;
+  }
   let body;
   try{
     body = (encryptionEnabled && encryptionPassword)
@@ -2442,6 +2508,10 @@ function renderSettings(){
     if(eggRateInput) eggRateInput.value = (typeof profile.easterEggRate === 'number' ? profile.easterEggRate * 100 : 3);
     const forceBtn = document.getElementById('forceEasterEggBtn');
     if(forceBtn) forceBtn.textContent = devForceEasterEgg ? '✅ Vai forçar na próxima abertura' : '🎭 Forçar na próxima abertura';
+    const forceBdayBtn = document.getElementById('forceBirthdayBtn');
+    if(forceBdayBtn) forceBdayBtn.textContent = devForceBirthday ? '✅ Vai forçar na próxima abertura' : '🎉 Forçar na próxima abertura';
+    const bdayInput = document.getElementById('birthdayDateInput');
+    if(bdayInput) bdayInput.value = profile.birthdayDate || `${String(BIRTHDAY_DEFAULT_DAY).padStart(2,'0')}-${String(BIRTHDAY_DEFAULT_MONTH).padStart(2,'0')}`;
     // dark mode textarea
     const ta = document.getElementById('importJsonInput');
     if(ta) ta.style.background = document.body.classList.contains('dark') ? '#1C1C23' : '#fff';
@@ -2605,6 +2675,25 @@ function saveSyncUrl(){
     showToast(syncUrl ? '🔗 URL guardada' : 'Sincronização desativada');
   }, 500);
 }
+async function scheduleMigrationUrl(){
+  const input = document.getElementById('migrationUrlInput');
+  const url = (input?.value || '').trim();
+  if(!url){ showToast('Cole a URL nova primeiro'); return; }
+  if(!url.startsWith('https://')){ showToast('❌ A URL deve começar com https://'); return; }
+  if(url === syncUrl){ showToast('É a mesma URL já em uso'); return; }
+
+  if(!confirm(`Agendar migração desta planilha para:\n\n${url}\n\nEsta URL vai ser enviada UMA VEZ para a planilha atual. Qualquer dispositivo (incluindo este) que sincronizar com a mesma planilha vai migrar sozinho para a URL nova. Continuar?`)) return;
+
+  // Envia a URL de migração diretamente neste push, sem depender de estado
+  // guardado — assim não há risco de o campo "syncUrl" ficar preso e ser
+  // reenviado em pushes futuros depois de reiniciar o app.
+  showToast('🔄 A enviar URL de migração…');
+  await pushToCloud(url);
+  if(input) input.value = '';
+  showToast('✅ URL de migração enviada — os dispositivos vão migrar ao sincronizar');
+  renderSettings();
+}
+
 async function importFromJson(){
   let raw = (document.getElementById('importJsonInput')?.value || '').trim();
   if(!raw){ showToast('Cole o JSON antes de importar'); return; }
@@ -4215,6 +4304,9 @@ async function toggleRequireUnlockEachSync(){
 // dados reais, nunca bloqueia o uso do app além da própria animação.
 // ---------------------------------------------------------------
 const EASTER_EGG_TARGET_NAME = 'ARTHUR SANTOS';
+const BIRTHDAY_DEFAULT_MONTH = 10; // outubro — usado só se profile.birthdayDate não estiver definida
+const BIRTHDAY_DEFAULT_DAY = 19;
+let devForceBirthday = false; // atalho do Modo Dev para testar sem esperar o dia certo
 
 function shouldTriggerEasterEgg(){
   if(devForceEasterEgg) return true;
@@ -4225,10 +4317,100 @@ function shouldTriggerEasterEgg(){
   return Math.random() < rate;
 }
 
+// A data de aniversário é configurável (Modo Dev) e sincronizada via profile,
+// guardada no formato "DD-MM". A mensagem usa sempre o nome atual do perfil —
+// não está mais fixa em "Arthur Santos", então funciona para quem estiver no perfil.
+function getBirthdayMonthDay(){
+  const raw = (profile.birthdayDate || '').trim();
+  const match = raw.match(/^(\d{1,2})-(\d{1,2})$/);
+  if(match){
+    const dd = parseInt(match[1], 10);
+    const mm = parseInt(match[2], 10);
+    if(mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) return { month: mm, day: dd };
+  }
+  return { month: BIRTHDAY_DEFAULT_MONTH, day: BIRTHDAY_DEFAULT_DAY };
+}
+
+function shouldTriggerBirthday(){
+  if(devForceBirthday) return true;
+  if(!profile.name || !profile.name.trim()) return false; // sem nome, sem festa
+  const { month, day } = getBirthdayMonthDay();
+  const today = new Date();
+  return today.getMonth() + 1 === month && today.getDate() === day;
+}
+
 async function maybeRunEasterEgg(){
+  // Aniversário tem prioridade — se for o dia certo, mostra a mensagem de
+  // parabéns em vez da brincadeira de hackeamento (não faz sentido "assustar"
+  // a pessoa no dia dela).
+  if(shouldTriggerBirthday()){
+    devForceBirthday = false;
+    await runBirthdayScreen();
+    return;
+  }
   if(!shouldTriggerEasterEgg()) return;
   devForceEasterEgg = false; // consome o "forçar" de uma vez, não repete sozinho
   await runHackScreen();
+}
+
+function runBirthdayScreen(){
+  return new Promise((resolve) => {
+    const screen = document.getElementById('birthdayScreen');
+    if(!screen){ resolve(); return; }
+    const nameEl = document.getElementById('birthdayNameDisplay');
+    if(nameEl) nameEl.textContent = (profile.name || '').trim() || 'Feliz Aniversário!';
+    screen.style.display = 'flex';
+    // Confetes simples via elementos posicionados aleatoriamente
+    const confettiColors = ['#D9A949', '#2C4F3D', '#C97259', '#F6EFE2', '#1F3A2E'];
+    const confettiHtml = Array.from({length: 40}, (_, i) => {
+      const left = Math.random() * 100;
+      const delay = Math.random() * 1.2;
+      const duration = 2.4 + Math.random() * 1.6;
+      const color = confettiColors[i % confettiColors.length];
+      const size = 6 + Math.random() * 6;
+      return `<div style="position:absolute;top:-20px;left:${left}%;width:${size}px;height:${size}px;background:${color};border-radius:2px;animation:confettiFall ${duration}s ease-in ${delay}s forwards;opacity:0.9;"></div>`;
+    }).join('');
+    const confettiLayer = document.getElementById('birthdayConfetti');
+    if(confettiLayer) confettiLayer.innerHTML = confettiHtml;
+
+    setTimeout(()=>{
+      screen.style.display = 'none';
+      resolve();
+    }, 5000);
+  });
+}
+
+function closeBirthdayScreen(){
+  const screen = document.getElementById('birthdayScreen');
+  if(screen) screen.style.display = 'none';
+}
+
+function toggleForceBirthday(){
+  devForceBirthday = !devForceBirthday;
+  renderSettings();
+  showToast(devForceBirthday ? '🎂 Vai forçar a mensagem de aniversário na próxima abertura' : 'Forçar aniversário desativado');
+}
+
+async function setBirthdayDate(value){
+  const raw = (value || '').trim();
+  const match = raw.match(/^(\d{1,2})-(\d{1,2})$/);
+  if(!match){
+    if(raw !== ''){
+      showToast('❌ Formato inválido — use DD-MM (ex: 19-10)');
+      const input = document.getElementById('birthdayDateInput');
+      if(input) input.value = profile.birthdayDate || '';
+    }
+    return;
+  }
+  const dd = parseInt(match[1], 10);
+  const mm = parseInt(match[2], 10);
+  if(mm < 1 || mm > 12 || dd < 1 || dd > 31){
+    showToast('❌ Data inválida');
+    return;
+  }
+  profile.birthdayDate = `${String(dd).padStart(2,'0')}-${String(mm).padStart(2,'0')}`;
+  await persistProfile();
+  showToast(`🎂 Aniversário definido para ${profile.birthdayDate} (sincronizado)`);
 }
 
 function runHackScreen(){
@@ -4237,43 +4419,72 @@ function runHackScreen(){
     const linesEl = document.getElementById('hackLines');
     if(!screen || !linesEl){ resolve(); return; }
 
-    const lines = [
-      '> iniciando diagnóstico de sistema…',
-      '> localizando dispositivo… OK',
-      '> acessando câmara frontal… OK',
-      '> lendo localização GPS… 41.1579° N, 8.6291° W',
-      '> extraindo contactos… 247 encontrados',
-      '> extraindo fotos… 1.204 encontradas',
-      '> ligando a servidor remoto… conectado',
-      '> transferindo dados pessoais… ',
+    const DUCK_ART =
+`   __
+<(o )___
+ ( ._> /
+  \`---'`;
+
+    // Cada item: string normal = digitada char-por-char.
+    // { art: true } = aparece de uma vez (rápido), sem digitar devagar.
+    const items = [
+      '> a aceder ao sistema…',
+      '> a localizar dispositivo… OK',
+      '> a extrair contactos… 247 encontrados',
+      '> a extrair fotos… 1.204 encontradas',
+      '> a transferir dados…',
       '> ████████████████████ 100%',
       '> acesso root concedido',
+      { art: true, text: DUCK_ART },
+      '> alerta: pato detectado no sistema',
       '> ',
-      '> ...',
-      '> ',
-      '> relaxa, é brincadeira 😄',
-      '> nada foi acedido de verdade — Corrida+ v' + APP_VERSION,
-      '> (se isto te assustou, foi por isso mesmo)'
+      '> calma lá 😄 nada disto é real',
+      '> é só uma brincadeira do Corrida+ v' + APP_VERSION
     ];
 
     screen.style.display = 'flex';
     linesEl.textContent = '';
-    let i = 0;
+    let idx = 0;
+    let charIdx = 0;
 
-    function typeLine(){
-      if(i >= lines.length){
+    function typeChar(){
+      if(idx >= items.length){
         setTimeout(()=>{
           screen.style.display = 'none';
           resolve();
-        }, 2200);
+        }, 2000);
         return;
       }
-      linesEl.textContent += (i > 0 ? '\n' : '') + lines[i];
-      i++;
-      const delay = lines[i-1].includes('%') ? 900 : (lines[i-1].trim() === '' ? 250 : 480);
-      setTimeout(typeLine, delay);
+      const item = items[idx];
+
+      // Arte ASCII: escreve tudo de uma vez, sem efeito de digitação lenta
+      if(typeof item === 'object' && item.art){
+        if(idx > 0) linesEl.textContent += '\n';
+        linesEl.textContent += item.text;
+        idx++;
+        charIdx = 0;
+        setTimeout(typeChar, 500);
+        return;
+      }
+
+      const currentLine = item;
+      if(charIdx === 0 && idx > 0) linesEl.textContent += '\n';
+      if(charIdx < currentLine.length){
+        linesEl.textContent += currentLine[charIdx];
+        charIdx++;
+        const charDelay = currentLine.includes('█') ? 6 : 9;
+        setTimeout(typeChar, charDelay);
+      } else {
+        idx++;
+        charIdx = 0;
+        const pauseAfterLine = currentLine.trim() === '' ? 150
+          : currentLine.includes('%') ? 250
+          : currentLine.includes('concedido') ? 350
+          : 120;
+        setTimeout(typeChar, pauseAfterLine);
+      }
     }
-    typeLine();
+    typeChar();
   });
 }
 
@@ -4322,13 +4533,35 @@ function renderSyncLog(){
   }).join('');
 }
 
-function exportSyncLog(){
-  if(!syncLog.length){ showToast('Nada para exportar ainda'); return; }
+function buildSyncLogText(){
   const lines = syncLog.map(e => {
     const iso = new Date(e.ts).toISOString();
     return `[${iso}] [${e.type.toUpperCase()}] ${e.message}${e.extra ? ' — ' + e.extra : ''}`;
   });
-  const text = lines.join('\n');
+  const header = `Corrida+ v${APP_VERSION} — log de sincronização\nDispositivo: ${navigator.userAgent}\nGerado em: ${new Date().toISOString()}\n\n`;
+  return header + lines.join('\n');
+}
+
+async function exportSyncLog(){
+  if(!syncLog.length){ showToast('Nada para exportar ainda'); return; }
+  const text = buildSyncLogText();
+
+  // No iPhone/Safari, navigator.share() abre a folha nativa de partilha
+  // (Mensagens, WhatsApp, Mail, etc.) — muito mais direto do que pedir para
+  // exportar um ficheiro e depois anexá-lo manualmente numa conversa.
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title: 'Corrida+ — log de sincronização',
+        text
+      });
+      return;
+    }catch(e){
+      if(e.name === 'AbortError') return; // utilizador cancelou a partilha, sem problema
+      // Se falhar por outro motivo, cai para o download normal abaixo
+    }
+  }
+
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
