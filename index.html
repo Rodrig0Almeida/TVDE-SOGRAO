@@ -1237,7 +1237,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
   color:#33FF66;
   overflow:hidden;
 ">
-  <div id="hackLines" style="font-size:13px;line-height:1.7;white-space:pre-wrap;"></div>
+  <div id="hackLines" style="font-size:13px;line-height:1.6;white-space:pre;overflow-x:auto;max-width:100%;"></div>
 </div>
 
 <!-- Mensagem de aniversário — só 19/10 para o perfil ARTHUR SANTOS -->
@@ -1696,7 +1696,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.0.3';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -1803,18 +1803,37 @@ const FUEL_TYPES = [
   { key:'gnv',      label:'GNV',      unit:'km/m³',  priceUnit:'R$/m³' }
 ];
 
+// ---------------------------------------------------------------
+// CHAVES DE MÊS ("monthKey") — o app organiza tudo por mês usando uma
+// string no formato "AAAA-MM" (ex: "2026-07") como chave do objeto global
+// monthData. Estas funções convertem entre Date e essa chave, e vice-versa.
+// ---------------------------------------------------------------
+// Converte um objeto Date na chave "AAAA-MM" correspondente ao seu mês/ano.
 function monthKeyFor(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+// Chave do mês atual (hoje), usada como ponto de partida ao abrir o app.
 function defaultReferenceMonthKey(){
   return monthKeyFor(new Date());
 }
+// Dada uma chave de mês, devolve a chave do mês ANTERIOR (usada por
+// importPreviousMonthBills, para copiar contas fixas do mês passado).
 function previousMonthKey(key){
   const [y,m] = key.split('-').map(Number);
   return monthKeyFor(new Date(y, m-2, 1));
 }
+// Converte uma chave "AAAA-MM" no nome do mês por extenso em português
+// (ex: "2026-07" → "julho de 2026"), usado nos títulos das telas.
 function monthLabelFor(key){
   const [y,m] = key.split('-').map(Number);
   return new Date(y, m-1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
 }
+// Garante que monthData[key] existe com todas as sub-estruturas necessárias
+// (earnings, billOverrides, billsPaid, hiddenBills, variableExpenses) antes
+// de devolver essa entrada. É chamada constantemente por toda a app sempre
+// que algo precisa "olhar" para um mês — inclusive só para exibir/navegar,
+// sem o utilizador ter adicionado nada. IMPORTANTE: isto NÃO grava nada em
+// storage/nuvem por si só — só cria a estrutura em memória. A limpeza de
+// meses que ficaram vazios (criados só por navegação, nunca preenchidos)
+// acontece depois, no envio à nuvem — ver pruneEmptyMonths().
 function ensureMonthEntry(key){
   if(!monthData[key]){
     monthData[key] = { earnings: [], billOverrides: {}, billsPaid: {}, hiddenBills: {}, variableExpenses: [] };
@@ -1843,34 +1862,68 @@ function allEarnings(){
   Object.keys(monthData).forEach(k => out = out.concat(ensureMonthEntry(k).earnings));
   return out;
 }
+// Mesma ideia que allEarnings(), mas para despesas variáveis. Junta todos os
+// meses num array só, para permitir filtrar por qualquer intervalo de datas
+// sem se preocupar com em qual "mês" cada despesa foi originalmente lançada.
 function allVariableExpenses(){
   let out = [];
   Object.keys(monthData).forEach(k => out = out.concat(ensureMonthEntry(k).variableExpenses));
   return out;
 }
+// Filtra allEarnings() para um intervalo de datas ISO (inclusive nos dois
+// extremos). Usado pelas visões Dia e Semana, que não trabalham com
+// monthData diretamente — sempre passam por aqui.
 function earningsInRange(startIso, endIso){
   return allEarnings().filter(e => e.date >= startIso && e.date <= endIso);
 }
+// Equivalente a earningsInRange(), mas para despesas variáveis. Note o
+// fallback isoDateFromTs(e.ts) — despesas antigas podem não ter o campo
+// "date" preenchido (só o timestamp), então reconstrói a data a partir dele.
 function variableExpensesInRange(startIso, endIso){
   return allVariableExpenses().filter(e => { const d = e.date || isoDateFromTs(e.ts); return d >= startIso && d <= endIso; });
 }
+// ---------------------------------------------------------------
+// SOMADORES GENÉRICOS — operam sobre uma lista qualquer de earnings
+// (diferente dos agregadores de "entry" mais abaixo, que trabalham sobre um
+// mês inteiro). Usados nas visões Dia/Semana, que filtram earnings por
+// intervalo de datas antes de somar.
+// ---------------------------------------------------------------
 function sumAmount(list){ return list.reduce((s,e)=>s+(e.amount||0),0); }
 function sumKm(list){ return list.reduce((s,e)=>s+(e.km||0),0); }
 function sumHours(list){ return list.reduce((s,e)=>s+(e.hours||0),0); }
 function sumByPlatform(list, platform){ return list.filter(e=>e.platform===platform).reduce((s,e)=>s+(e.amount||0),0); }
 
+// Devolve o valor a cobrar de uma bill (conta fixa) NESTE mês específico.
+// Se o utilizador tiver definido um valor customizado só para este mês
+// (entry.billOverrides[bill.id] existe — ex: "este mês o aluguel veio
+// diferente"), usa esse valor; senão usa o valor padrão da bill
+// (bill.defaultAmount). Não aplica frequência diária/semanal aqui — isso é
+// feito por quem chama (ver totalFixedBills logo abaixo).
 function billAmount(entry, bill){ return entry.billOverrides.hasOwnProperty(bill.id) ? entry.billOverrides[bill.id] : bill.defaultAmount; }
 const fmt = (n) => {
   const rounded = Math.round(n * 100) / 100;
   return '€ ' + (rounded === 0 ? 0 : rounded).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 };
+// Gera um ID único simples (não é UUID de verdade, mas suficiente aqui:
+// combina caracteres aleatórios com o timestamp atual, então colisões são
+// praticamente impossíveis dentro do uso real do app). Usado para todo
+// registo novo (ganhos, despesas, bills).
 function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+// Escapa caracteres HTML perigosos antes de inserir texto do utilizador
+// (nomes, notas) diretamente em innerHTML — proteção básica contra XSS
+// self-inflicted (não há servidor/outros utilizadores aqui, mas é boa prática
+// mesmo assim, e evita que um "&" ou "<" digitado quebre a renderização).
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+// Formata um timestamp para exibição amigável: "hoje, HH:MM" se for hoje,
+// senão "DD mês" (ex: "08 jun"). Usado em listas de atividade recente.
 function formatDate(ts){
   const d = new Date(ts), today = new Date();
   if(d.toDateString() === today.toDateString()) return 'hoje, ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
 }
+// Como formatDate(), mas a partir de uma string "AAAA-MM-DD" em vez de
+// timestamp, e devolve "hoje" (sem hora) ou "seg, 08 jun" (com dia da
+// semana). Usado nas listas de ganhos/despesas, que guardam a data como string.
 function formatDateStr(dateStr){
   if(!dateStr) return '';
   const [y,m,d] = dateStr.split('-').map(Number);
@@ -1974,9 +2027,50 @@ function hideLoadingState(){
   document.getElementById('loadingState').style.display = 'none';
 }
 
+// ---------------------------------------------------------------
+// SINCRONIZAÇÃO COM A NUVEM (Google Sheets via Apps Script)
+// ---------------------------------------------------------------
+// Arquitetura: o Apps Script (código Google, fora deste ficheiro) expõe um
+// doGet() que devolve o conteúdo da célula A1 como JSON, e um doPost() que
+// sobrescreve essa célula com o que for enviado. Este app só faz GET
+// (buscar) e POST (enviar) para a URL guardada em `syncUrl` — não há
+// autenticação própria, a "segurança" vem de a URL do Apps Script ser
+// secreta (por isso o cuidado em não a deixar hardcoded no código público).
+//
+// _doCloudSync() = GET (buscar dados da planilha e aplicar localmente)
+// pushToCloud()  = POST (enviar o estado local para a planilha)
+//
+// TIMEOUT E RETRY: toda chamada de rede tem um limite de 15s (SYNC_TIMEOUT_MS)
+// via AbortController — sem isto, uma planilha lenta deixava o app "preso"
+// indefinidamente sem feedback. Falhas MUITO rápidas (<500ms) são tratadas
+// como sintoma de rate-limiting/cold-start do Apps Script (não lentidão de
+// rede) e disparam até 2 retries automáticos com backoff crescente antes de
+// desistir e mostrar erro ao utilizador — ver o bloco catch mais abaixo.
+//
+// MIGRAÇÃO DE PLANILHA: se o JSON recebido tiver um campo "syncUrl" (texto
+// plano, verificado ANTES de tentar decifrar, mesmo com encriptação ativa),
+// o app entende que deve trocar de planilha e sincroniza de novo já com a
+// URL nova. Isto é usado por scheduleMigrationUrl() no Modo Dev — ver essa
+// função para detalhes de como agendar uma migração.
+//
+// ENCRIPTAÇÃO: se o JSON vier com {encrypted:true, salt, iv, data}, o
+// conteúdo real está cifrado (AES-GCM) e precisa da senha guardada
+// localmente (encryptionPassword) para decifrar — ver a secção "ENCRIPTAÇÃO"
+// mais abaixo no ficheiro para todos os detalhes de como isso funciona.
+//
+// LOG: cada tentativa (sucesso, erro, timeout, migração) é registada via
+// logSyncEvent() — visível e exportável no Modo Dev, útil para diagnosticar
+// problemas reportados por utilizadores sem acesso direto ao dispositivo.
+// ---------------------------------------------------------------
 const SYNC_TIMEOUT_MS = 15000;
 const SYNC_MAX_RETRIES = 2; // total de 3 tentativas (1 original + 2 retries)
 
+// Busca o estado atual da planilha (GET) e aplica localmente. Chamada
+// recursivamente a si própria em dois cenários: (1) retry automático após
+// falha rápida transitória, (2) depois de migrar para uma URL nova, para já
+// sincronizar com ela imediatamente. O parâmetro `attempt` existe só para
+// controlar quantas vezes já tentou nesta sequência (não é exposto a quem
+// chama de fora — a primeira chamada externa nunca passa esse argumento).
 async function _doCloudSync(attempt) {
   attempt = attempt || 1;
   if (!syncUrl) {
@@ -2199,9 +2293,16 @@ async function loadAll(){
   await maybeRunEasterEgg();
 }
 
+// Atalhos para gravar cada parte do estado global. Todos passam por
+// safeSet() (ver logo abaixo), que grava local e agenda envio à nuvem se a
+// chave fizer parte de SYNC_KEYS. Chamados depois de qualquer alteração de
+// dados (novo ganho, nova despesa, mudança de configuração, etc.) — se
+// adicionares um novo tipo de dado ao app, segue este mesmo padrão.
 async function persistProfile()   { await safeSet('profile',   profile);   }
 async function persistBills()     { await safeSet('bills',     bills);     }
 async function persistMonthData() { await safeSet('monthData', monthData); }
+// localSettings (tema, cor, dark mode) é device-only — nunca sincronizado
+// com a nuvem, por isso usa window.storage diretamente em vez de safeSet().
 async function persistLocalSettings() {
   try{ await window.storage.set('localSettings', JSON.stringify(localSettings)); }catch(e){}
 }
@@ -2253,6 +2354,17 @@ function pruneEmptyMonths(source){
   return cleaned;
 }
 
+// Envia o estado local (bills, monthData, profile) para a planilha (POST),
+// substituindo TUDO o que estava lá — não é um merge incremental, é sobrescrita
+// total. Chamada automaticamente sempre que algo muda (ganhos, despesas,
+// configurações) através dos vários persistX()/confirmY() espalhados pelo
+// código, e também manualmente por scheduleMigrationUrl() para agendar
+// migração de planilha (ver parâmetro migrationUrl abaixo).
+//
+// monthData passa por pruneEmptyMonths() antes de enviar — meses sem
+// nenhum dado real (só "visitados" ao navegar) são removidos do payload
+// para não poluir a planilha com lixo. Ver pruneEmptyMonths() para a lógica
+// exata do que conta como "vazio".
 async function pushToCloud(migrationUrl){
   if(!syncUrl) return;
   // localSettings (appearance: darkMode, themeColor) is NEVER included — it's per-device only.
@@ -2328,6 +2440,13 @@ const TABS = ['tabGanhos','tabDespesas','tabLucro','tabStats','tabSettings'];
 function activateTab(id){
   TABS.forEach(t => document.getElementById(t).classList.toggle('active', t === id));
 }
+// ---------------------------------------------------------------
+// NAVEGAÇÃO ENTRE ABAS — cada goX() segue sempre o mesmo padrão: mostra a
+// tela certa, marca a aba correspondente como ativa na barra inferior, e
+// chama a função de render daquela tela (para garantir que os dados estão
+// atualizados, já que o utilizador pode ter mudado de mês/dados noutra
+// aba antes de voltar a esta). Para adicionar uma aba nova, copia o padrão.
+// ---------------------------------------------------------------
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -2871,17 +2990,40 @@ function changeStatsYear(delta){
   renderStats();
 }
 
+// ---------------------------------------------------------------
+// IVA E COMISSÃO — funções centrais usadas em TODA a app (Ganhos, Despesas,
+// Estatísticas, Lucro). Se precisares de mudar a fórmula fiscal, é aqui.
+//
+// Ambas as taxas vivem em profile.ivaRate / profile.comissaoRate (guardadas
+// como número inteiro representando percentagem, ex: 6 = 6%), configuráveis
+// nas Configurações do app, e sincronizadas normalmente como parte do
+// profile inteiro.
+//
+// IMPORTANTE: tanto IVA quanto comissão incidem sobre o BRUTO DAS APPS
+// (Uber + Bolt), nunca sobre Particular/Outros — essa separação é feita
+// pelo chamador (ver ganhosAppsAmount/ganhosParticularsAmount logo abaixo),
+// não dentro destas funções. ivaAmount()/comissaoAmount() apenas multiplicam
+// o valor que recebem pela taxa — não sabem nem verificam de onde esse
+// valor veio.
+// ---------------------------------------------------------------
+// Calcula o valor de IVA a descontar sobre um valor bruto (normalmente o
+// bruto de Uber+Bolt do período). Devolve 0 se a taxa não estiver configurada.
 function ivaAmount(grossEarnings){
   const rate = parseFloat(profile.ivaRate) || 0;
   return grossEarnings * (rate / 100);
 }
+// Devolve a taxa de IVA atual como número (ex: 6 para 6%), só para exibição.
 function ivaRate(){
   return parseFloat(profile.ivaRate) || 0;
 }
+// Mesma lógica que ivaAmount(), mas para a comissão da plataforma (Uber/Bolt
+// cobram uma percentagem sobre o valor da corrida). Também incide só sobre
+// o bruto das apps, nunca sobre Particular/Outros.
 function comissaoAmount(grossEarnings){
   const rate = parseFloat(profile.comissaoRate) || 0;
   return grossEarnings * (rate / 100);
 }
+// Devolve a taxa de comissão atual como número (ex: 4 para 4%), só para exibição.
 function comissaoRate(){
   return parseFloat(profile.comissaoRate) || 0;
 }
@@ -4084,10 +4226,35 @@ function importPreviousMonthBills(){
   showToast('Despesas fixas do mês anterior importadas.');
 }
 
+// ---------------------------------------------------------------
+// AGREGADORES FINANCEIROS BÁSICOS (usados em vários lugares: gráficos,
+// resumos, exportação). Todos recebem um "entry" de monthData (a estrutura
+// { earnings, variableExpenses, billOverrides, billsPaid, hiddenBills } de
+// um mês específico) e devolvem um número — nunca modificam o entry.
+// ---------------------------------------------------------------
+// Soma bruta de TODOS os ganhos do mês (Uber + Bolt + Particular + Outros).
+// Não filtra por plataforma nem aplica IVA/comissão — é só a soma crua.
 function totalEarnings(entry){ return entry.earnings.reduce((s,e)=>s+(e.amount||0),0); }
+// Soma de ganhos de uma única plataforma (ex: totalEarningsByPlatform(entry,'uber')).
 function totalEarningsByPlatform(entry, platform){ return entry.earnings.filter(e=>e.platform===platform).reduce((s,e)=>s+(e.amount||0),0); }
+// Soma de quilómetros percorridos no mês (campo "km" de cada earning).
 function totalKm(entry){ return entry.earnings.reduce((s,e)=>s+(e.km||0),0); }
+// Soma de TODAS as despesas variáveis do mês, sem separar por categoria
+// (inclui combustível junto com o resto — quem precisa separar combustível
+// faz o filtro manualmente, ver exemplos em renderStatsMonth/renderLucroMonth).
 function totalVariableExpenses(entry){ return entry.variableExpenses.reduce((s,e)=>s+(e.amount||0),0); }
+
+// Calcula o total de despesas FIXAS (contas recorrentes) que se aplicam ao
+// mês corrente (currentMonthKey, variável global). Regras importantes:
+//   - Só entram bills criadas no mês atual ou antes (createdMonthKey <=
+//     currentMonthKey) — uma conta criada em julho não aparece em junho.
+//   - Bills marcadas como ocultas neste mês específico (entry.hiddenBills)
+//     são excluídas — é assim que o utilizador "desliga" uma conta antiga
+//     sem apagá-la, normalmente ao criar uma versão nova dela.
+//   - O valor de cada bill vem de billAmount(entry, b), que já resolve
+//     overrides (valor customizado só para este mês) antes do padrão.
+//   - Frequência "diaria"/"semanal" multiplica o valor pelo nº de dias/
+//     semanas do mês corrente; "mensal" (padrão) usa o valor uma vez só.
 function totalFixedBills(entry){
   // Only include bills that were created in or before the current month and are not hidden
   const relevantBills = bills.filter(b => (!b.createdMonthKey || b.createdMonthKey <= currentMonthKey) && !entry.hiddenBills[b.id]);
@@ -4108,6 +4275,13 @@ function totalFixedBills(entry){
   }, 0);
 }
 
+// Monta o card de resumo financeiro do mês (usado nas abas Ganhos e
+// Despesas — ver os dois pontos de chamada). Aplica a fórmula oficial do
+// líquido: (Bruto TVDE − IVA − Comissão) − Combustível + Particular/Outros,
+// depois subtrai despesas fixas e outras variáveis para chegar ao lucro.
+// Ver também: ivaAmount(), comissaoAmount() mais acima, que implementam o
+// mesmo cálculo usado na aba Lucro — se mudares a fórmula aqui, confirma
+// que renderLucroMonth/renderStatsMonth continuam consistentes.
 function renderMonthSummary(entry){
   const apps      = entry.earnings.filter(e=>e.platform==='uber'||e.platform==='bolt').reduce((s,e)=>s+(e.amount||0),0);
   const part      = entry.earnings.filter(e=>e.platform==='particular'||e.platform==='outros').reduce((s,e)=>s+(e.amount||0),0);
@@ -4157,6 +4331,10 @@ function renderMonthSummary(entry){
 // é usada para cifrar/decifrar. Sem a senha certa, o conteúdo da célula A1
 // da planilha é ilegível (apenas texto cifrado em base64).
 // ---------------------------------------------------------------
+// Deriva uma chave AES-256 a partir da senha do utilizador usando PBKDF2
+// (100.000 iterações, SHA-256). O "salt" é diferente a cada encriptação
+// (gerado aleatoriamente em encryptPayload), então a mesma senha nunca
+// produz a mesma chave duas vezes — impede ataques de tabela pré-calculada.
 async function deriveKeyFromPassword(password, saltBytes){
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -4170,15 +4348,26 @@ async function deriveKeyFromPassword(password, saltBytes){
     ['encrypt', 'decrypt']
   );
 }
+// Converte um ArrayBuffer/Uint8Array em string Base64 (para poder guardar
+// salt/iv/dados cifrados como texto dentro do JSON enviado à planilha).
 function bufToBase64(buf){
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }
+// Inverso de bufToBase64 — reconstrói o Uint8Array original a partir da
+// string Base64 guardada no envelope encriptado.
 function base64ToBuf(b64){
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
+// Cifra um objeto JS qualquer (normalmente o payload {bills, monthData,
+// profile}) com AES-GCM. Gera salt e iv novos aleatórios a cada chamada —
+// por isso encriptar o mesmo conteúdo duas vezes produz resultados
+// diferentes (isto é esperado e correto, não um bug). Devolve um "envelope"
+// { encrypted:true, salt, iv, data } pronto para virar JSON e ser enviado
+// à planilha — é exatamente esta estrutura que _doCloudSync() reconhece
+// pelo campo "encrypted:true" para saber que precisa de decifrar.
 async function encryptPayload(obj, password){
   const enc = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -4193,6 +4382,11 @@ async function encryptPayload(obj, password){
     data: bufToBase64(ciphertext)
   };
 }
+// Inverso de encryptPayload() — recebe o envelope {salt, iv, data} e a
+// senha, e devolve o objeto JS original. Lança exceção se a senha estiver
+// errada (AES-GCM inclui uma tag de autenticação que falha a verificação
+// nesse caso) — os chamadores devem sempre envolver isto em try/catch e
+// tratar a falha como "senha incorreta", nunca assumir sucesso silencioso.
 async function decryptPayload(envelope, password){
   const dec = new TextDecoder();
   const salt = base64ToBuf(envelope.salt);
@@ -4203,6 +4397,12 @@ async function decryptPayload(envelope, password){
   return JSON.parse(dec.decode(plaintext));
 }
 
+// Botão principal do Modo Dev: liga/desliga a encriptação. Ao ativar pela
+// primeira vez (sem senha ainda guardada), pede a senha via prompt() — se o
+// utilizador cancelar, a ativação é revertida. Ao desativar, NÃO apaga a
+// senha guardada (fica disponível caso reative depois). Qualquer mudança
+// aqui dispara pushToCloud() imediatamente, para a planilha refletir o novo
+// estado (cifrado ou não) o quanto antes.
 function toggleEncryption(){
   encryptionEnabled = !encryptionEnabled;
   if(encryptionEnabled && !encryptionPassword){
@@ -4297,17 +4497,73 @@ async function toggleRequireUnlockEachSync(){
   showToast(requireUnlockEachSync ? '🔒 Vai pedir confirmação a cada sincronização' : '🔓 Decifra automaticamente em segundo plano');
 }
 
-// ---------------------------------------------------------------
-// "EASTER EGG" — brincadeira de tela de hackeamento
-// Aparece raramente (taxa configurável, sincronizada via profile) só quando
-// o nome no perfil bate com o alvo. Puramente cosmético — nunca toca em
-// dados reais, nunca bloqueia o uso do app além da própria animação.
-// ---------------------------------------------------------------
-const EASTER_EGG_TARGET_NAME = 'ARTHUR SANTOS';
-const BIRTHDAY_DEFAULT_MONTH = 10; // outubro — usado só se profile.birthdayDate não estiver definida
-const BIRTHDAY_DEFAULT_DAY = 19;
-let devForceBirthday = false; // atalho do Modo Dev para testar sem esperar o dia certo
+// =================================================================
+// "EASTER EGG" — BRINCADEIRAS SECRETAS DO APP
+// =================================================================
+// Duas brincadeiras vivem nesta secção, ambas condicionadas ao NOME
+// GUARDADO NO PERFIL (profile.name), não a um utilizador/dispositivo
+// específico — se o nome no perfil mudar, o comportamento muda com ele.
+//
+// 1) "Hackeamento falso" (runHackScreen)
+//    - Dispara raramente (taxa configurável) só quando profile.name bate
+//      exatamente com EASTER_EGG_TARGET_NAME (case-insensitive).
+//    - Objetivo: assustar/divertir de leve quem abre o app, sem tocar em
+//      nenhum dado real — é 100% cosmético, uma animação de texto.
+//    - Pode ser forçada (Modo Dev) ou desativada por completo.
+//
+// 2) "Feliz Aniversário" (runBirthdayScreen)
+//    - Dispara na data configurada (profile.birthdayDate, formato DD-MM;
+//      se vazio, usa BIRTHDAY_DEFAULT_DAY/MONTH abaixo).
+//    - Funciona para QUALQUER nome preenchido no perfil (não está fixa em
+//      "Arthur Santos" — a tela usa profile.name dinamicamente).
+//    - Tem prioridade sobre o hackeamento se caírem no mesmo dia: não faz
+//      sentido assustar alguém no aniversário dela.
+//
+// SINCRONIZAÇÃO: todas as configurações (taxa, ativado/desativado, data de
+// aniversário) vivem dentro de "profile", que já é sincronizado inteiro via
+// pushToCloud()/applyCloudData() — não precisam de nenhum código extra de
+// sync. Isto é intencional: se a pessoa descobrir a brincadeira e desativar
+// num dispositivo, fica desativada em todos os que sincronizam com a mesma
+// planilha.
+//
+// PONTO DE ENTRADA: maybeRunEasterEgg() é chamada uma única vez em loadAll(),
+// depois do splash esconder e da sincronização inicial terminar. Se quiseres
+// que a verificação aconteça noutro momento (ex: a cada troca de aba), é só
+// mudar onde essa chamada acontece — a lógica interna não depende de where.
+//
+// AJUSTES FUTUROS MAIS PROVÁVEIS:
+//   - Trocar o nome-alvo do hackeamento → EASTER_EGG_TARGET_NAME abaixo.
+//   - Trocar a data padrão do aniversário → BIRTHDAY_DEFAULT_DAY/MONTH abaixo.
+//   - Mudar o texto/duração do hackeamento → dentro de runHackScreen(), ver
+//     nota sobre o Base64 mais abaixo antes de editar.
+//   - Mudar o texto da mensagem de aniversário → é HTML puro no <div
+//     id="birthdayScreen"> perto do topo do ficheiro, não está codificado.
+// =================================================================
 
+// Nome exato (após trim + uppercase) que ativa a brincadeira de hackeamento.
+// Comparação é feita em shouldTriggerEasterEgg() logo abaixo.
+const EASTER_EGG_TARGET_NAME = 'ARTHUR SANTOS';
+
+// Data padrão da mensagem de aniversário, usada apenas se o utilizador nunca
+// tiver configurado profile.birthdayDate no Modo Dev. Formato: mês (1-12) e
+// dia (1-31) como números soltos, não string.
+const BIRTHDAY_DEFAULT_MONTH = 10; // outubro
+const BIRTHDAY_DEFAULT_DAY = 19;
+
+// Atalho do Modo Dev: força a mensagem de aniversário a aparecer na próxima
+// abertura do app, independente da data real. É consumida (voltada a false)
+// assim que usada — ver maybeRunEasterEgg(). Vive fora do profile de propósito:
+// é só um interruptor local de teste, não faz sentido sincronizar entre
+// dispositivos.
+let devForceBirthday = false;
+
+// Decide se a brincadeira de hackeamento deve rodar nesta abertura do app.
+// Regras, em ordem de prioridade:
+//   1. devForceEasterEgg (Modo Dev) força sempre, ignorando tudo o resto.
+//   2. profile.easterEggDisabled desativa por completo, mesmo com nome certo.
+//   3. O nome no perfil tem de bater exatamente com EASTER_EGG_TARGET_NAME.
+//   4. Só então entra o sorteio: profile.easterEggRate (0 a 1) é a
+//      probabilidade por abertura; padrão 3% (0.03) se nunca foi configurada.
 function shouldTriggerEasterEgg(){
   if(devForceEasterEgg) return true;
   if(profile.easterEggDisabled) return false;
@@ -4317,9 +4573,11 @@ function shouldTriggerEasterEgg(){
   return Math.random() < rate;
 }
 
-// A data de aniversário é configurável (Modo Dev) e sincronizada via profile,
-// guardada no formato "DD-MM". A mensagem usa sempre o nome atual do perfil —
-// não está mais fixa em "Arthur Santos", então funciona para quem estiver no perfil.
+// Lê profile.birthdayDate (formato "DD-MM", ex: "19-10") e devolve
+// { month, day } como números. Se o campo estiver vazio, mal formatado, ou
+// com valores fora do intervalo válido, cai automaticamente para os
+// valores padrão (BIRTHDAY_DEFAULT_MONTH/DAY) sem lançar erro — a mensagem
+// de aniversário simplesmente não aparece na data errada, não trava o app.
 function getBirthdayMonthDay(){
   const raw = (profile.birthdayDate || '').trim();
   const match = raw.match(/^(\d{1,2})-(\d{1,2})$/);
@@ -4331,6 +4589,10 @@ function getBirthdayMonthDay(){
   return { month: BIRTHDAY_DEFAULT_MONTH, day: BIRTHDAY_DEFAULT_DAY };
 }
 
+// Decide se a mensagem de aniversário deve aparecer hoje. Ao contrário do
+// hackeamento, NÃO depende de um nome específico — qualquer profile.name
+// preenchido é suficiente, desde que a data bata. Se o perfil não tiver
+// nome nenhum, a função recusa (não faz sentido festejar um perfil vazio).
 function shouldTriggerBirthday(){
   if(devForceBirthday) return true;
   if(!profile.name || !profile.name.trim()) return false; // sem nome, sem festa
@@ -4339,20 +4601,28 @@ function shouldTriggerBirthday(){
   return today.getMonth() + 1 === month && today.getDate() === day;
 }
 
+// Ponto de entrada único, chamado a partir de loadAll() depois do splash
+// esconder. Verifica aniversário primeiro (prioridade sobre o hackeamento —
+// não teria graça "assustar" alguém no dia dela); só se não for aniversário
+// é que considera a brincadeira de hackeamento.
 async function maybeRunEasterEgg(){
-  // Aniversário tem prioridade — se for o dia certo, mostra a mensagem de
-  // parabéns em vez da brincadeira de hackeamento (não faz sentido "assustar"
-  // a pessoa no dia dela).
   if(shouldTriggerBirthday()){
-    devForceBirthday = false;
+    devForceBirthday = false; // consome o forçar, não repete sozinho na próxima abertura
     await runBirthdayScreen();
     return;
   }
   if(!shouldTriggerEasterEgg()) return;
-  devForceEasterEgg = false; // consome o "forçar" de uma vez, não repete sozinho
+  devForceEasterEgg = false; // idem — consumido de uma vez só
   await runHackScreen();
 }
 
+// Mostra a tela de aniversário (definida em HTML como <div id="birthdayScreen">,
+// perto do topo do ficheiro, junto ao splash e ao hackScreen). O nome exibido
+// é lido de profile.name em tempo real — não há texto fixo aqui. Gera 40
+// "confetes" como <div>s posicionados/animados aleatoriamente via CSS
+// (@keyframes confettiFall, definido logo depois do HTML da tela). A tela
+// fecha sozinha depois de 5 segundos, ou antes se o utilizador tocar nela
+// (ver closeBirthdayScreen, ligada ao onclick do próprio div).
 function runBirthdayScreen(){
   return new Promise((resolve) => {
     const screen = document.getElementById('birthdayScreen');
@@ -4380,17 +4650,28 @@ function runBirthdayScreen(){
   });
 }
 
+// Fecha a tela de aniversário antes do tempo, se o utilizador tocar nela.
+// Ligada via onclick no próprio <div id="birthdayScreen">.
 function closeBirthdayScreen(){
   const screen = document.getElementById('birthdayScreen');
   if(screen) screen.style.display = 'none';
 }
 
+// Botão do Modo Dev: agenda a mensagem de aniversário para aparecer na
+// próxima vez que o app abrir, sem precisar de esperar pela data real.
+// Útil para testar antes do dia oficial. devForceBirthday é consumida (volta
+// a false) automaticamente dentro de maybeRunEasterEgg() assim que usada.
 function toggleForceBirthday(){
   devForceBirthday = !devForceBirthday;
   renderSettings();
   showToast(devForceBirthday ? '🎂 Vai forçar a mensagem de aniversário na próxima abertura' : 'Forçar aniversário desativado');
 }
 
+// Campo do Modo Dev para configurar a data de aniversário (formato DD-MM).
+// Valida o formato e o intervalo antes de gravar; se inválido, mostra erro
+// e reverte o campo ao valor anterior em vez de aceitar lixo. O valor fica
+// em profile.birthdayDate, que já é sincronizado como parte do profile
+// inteiro — não precisa de nenhum código de sync adicional.
 async function setBirthdayDate(value){
   const raw = (value || '').trim();
   const match = raw.match(/^(\d{1,2})-(\d{1,2})$/);
@@ -4413,42 +4694,71 @@ async function setBirthdayDate(value){
   showToast(`🎂 Aniversário definido para ${profile.birthdayDate} (sincronizado)`);
 }
 
+// Mostra a brincadeira de "hackeamento" — animação de texto estilo terminal
+// que digita linha a linha (efeito de máquina de escrever), termina com uma
+// arte ASCII de 3 patos lado a lado, e revela no final que é só brincadeira.
+// A tela em si é o <div id="hackScreen"> no HTML, perto do splash.
+//
+// >>> SOBRE O TEXTO CODIFICADO EM BASE64 (ITEMS_B64 abaixo) <<<
+// As linhas de diálogo estão em Base64 só para não aparecerem em texto claro
+// numa leitura casual do código-fonte (a graça da brincadeira depende de
+// quem abre o app não saber o que vai acontecer). NÃO é segurança de
+// verdade — qualquer pessoa com um pouco de curiosidade pode copiar a
+// string e rodar atob(...) na consola do browser para ler tudo. Se
+// precisares de editar o texto no futuro:
+//   1. Escreve as linhas normalmente num array JS, uma string por linha,
+//      juntas com '\n'. Usa o marcador literal "__ART__" onde a arte do
+//      pato deve entrar, e "__VERSION__" onde queres que apareça a versão
+//      do app (APP_VERSION é substituída automaticamente depois de decodificar).
+//   2. Codifica esse texto em Base64 (no Node: 
+//      Buffer.from(texto, 'utf-8').toString('base64'); no browser/consola:
+//      btoa(unescape(encodeURIComponent(texto))) ).
+//   3. Substitui o valor de ITEMS_B64 pela nova string.
+//   4. Testa decodificando de volta antes de publicar — um Base64 mal
+//      formado faz atob() lançar erro e a brincadeira simplesmente falha
+//      silenciosamente (a Promise nunca resolve/rejeita de forma visível).
 function runHackScreen(){
   return new Promise((resolve) => {
     const screen = document.getElementById('hackScreen');
     const linesEl = document.getElementById('hackLines');
     if(!screen || !linesEl){ resolve(); return; }
 
-    const DUCK_ART =
-`   __
-<(o )___
- ( ._> /
-  \`---'`;
+    // Arte ASCII do pato, gerada em código (não faz parte do Base64) porque
+    // é curta e mais fácil de ajustar aqui do que dentro de uma string
+    // codificada. DUCK_COUNT controla quantos patos aparecem lado a lado —
+    // 3 é o máximo confortável numa tela de telemóvel com fonte 13px sem
+    // quebrar linha (testado; DUCK_COUNT=5 já ultrapassa a largura útil).
+    const DUCK = ['  __', '<(o )___', ' ( ._> /', '  `---\'', ''];
+    const DUCK_COUNT = 3;
+    const DUCK_ART = DUCK.map((line, i) =>
+      Array.from({length: DUCK_COUNT}, () => line.padEnd(9, ' ')).join('')
+    ).join('\n').trimEnd();
 
-    // Cada item: string normal = digitada char-por-char.
-    // { art: true } = aparece de uma vez (rápido), sem digitar devagar.
-    const items = [
-      '> a aceder ao sistema…',
-      '> a localizar dispositivo… OK',
-      '> a extrair contactos… 247 encontrados',
-      '> a extrair fotos… 1.204 encontradas',
-      '> a transferir dados…',
-      '> ████████████████████ 100%',
-      '> acesso root concedido',
-      { art: true, text: DUCK_ART },
-      '> alerta: pato detectado no sistema',
-      '> ',
-      '> calma lá 😄 nada disto é real',
-      '> é só uma brincadeira do Corrida+ v' + APP_VERSION
-    ];
+    // Ver o comentário grande acima da função para como editar este texto.
+    const ITEMS_B64 = 'PiBhIGFjZWRlciBhbyBzaXN0ZW1h4oCmCj4gYSBsb2NhbGl6YXIgZGlzcG9zaXRpdm/igKYgT0sKPiBhIGV4dHJhaXIgY29udGFjdG9z4oCmIDI0NyBlbmNvbnRyYWRvcwo+IGEgZXh0cmFpciBmb3Rvc+KApiAxLjIwNCBlbmNvbnRyYWRhcwo+IGEgdHJhbnNmZXJpciBkYWRvc+KApgo+IOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiOKWiCAxMDAlCj4gYWNlc3NvIHJvb3QgY29uY2VkaWRvCl9fQVJUX18KPiBhbGVydGE6IGludmFzw6NvIGRlIHBhdG9zIGRldGVjdGFkYQo+IAo+IGNhbG1hIGzDoSDwn5iEIG5hZGEgZGlzdG8gw6kgcmVhbAo+IMOpIHPDsyB1bWEgYnJpbmNhZGVpcmEgZG8gQ29ycmlkYSsgdl9fVkVSU0lPTl9f';
+    // atob() decodifica o Base64 mas devolve uma string "binária" onde cada
+    // caractere é 1 byte — não lida bem com UTF-8 (acentos, emoji). O par
+    // decodeURIComponent(escape(...)) é o truque clássico para reconstituir
+    // UTF-8 corretamente a partir desse resultado binário.
+    const decodedText = decodeURIComponent(escape(atob(ITEMS_B64)));
+    const items = decodedText.split('\n').map(line =>
+      line === '__ART__' ? { art: true, text: DUCK_ART } : line.replace('__VERSION__', APP_VERSION)
+    );
 
     screen.style.display = 'flex';
     linesEl.textContent = '';
-    let idx = 0;
-    let charIdx = 0;
+    let idx = 0;      // índice do item atual (linha de texto ou bloco de arte)
+    let charIdx = 0;  // índice do caractere atual dentro da linha (efeito de digitação)
 
+    // Loop de animação: digita cada linha caractere a caractere (typewriter
+    // effect), exceto blocos de arte ASCII que aparecem de uma vez (ver
+    // "if(item.art)" abaixo) para não ficar lento a "desenhar" o pato.
+    // Ajustar velocidade: charDelay controla ms entre cada caractere digitado;
+    // pauseAfterLine controla a pausa ao terminar cada linha antes da próxima.
     function typeChar(){
       if(idx >= items.length){
+        // Todas as linhas mostradas — espera 2s antes de esconder a tela,
+        // dando tempo de ler a última linha (a revelação de que é brincadeira).
         setTimeout(()=>{
           screen.style.display = 'none';
           resolve();
@@ -4463,7 +4773,7 @@ function runHackScreen(){
         linesEl.textContent += item.text;
         idx++;
         charIdx = 0;
-        setTimeout(typeChar, 500);
+        setTimeout(typeChar, 500); // pausa depois de mostrar a arte, antes da próxima linha
         return;
       }
 
@@ -4472,11 +4782,17 @@ function runHackScreen(){
       if(charIdx < currentLine.length){
         linesEl.textContent += currentLine[charIdx];
         charIdx++;
+        // Barra de progresso (contém █) digita mais rápido que texto normal
+        // — parece mais natural para uma barra "carregando" do que uma
+        // digitação lenta caractere a caractere.
         const charDelay = currentLine.includes('█') ? 6 : 9;
         setTimeout(typeChar, charDelay);
       } else {
         idx++;
         charIdx = 0;
+        // Pausas maiores depois de linhas "importantes" (percentagem, ou a
+        // palavra "concedido") para dar ênfase dramática; linha vazia usa
+        // pausa curta só para respirar visualmente.
         const pauseAfterLine = currentLine.trim() === '' ? 150
           : currentLine.includes('%') ? 250
           : currentLine.includes('concedido') ? 350
@@ -4488,12 +4804,22 @@ function runHackScreen(){
   });
 }
 
+// Botão do Modo Dev: força a brincadeira de hackeamento a aparecer na
+// próxima abertura do app, ignorando nome e taxa de probabilidade — útil
+// para testar sem depender do sorteio aleatório. Consumida automaticamente
+// dentro de maybeRunEasterEgg() assim que usada (não repete sozinha).
 function toggleForceEasterEgg(){
   devForceEasterEgg = !devForceEasterEgg;
   renderSettings();
   showToast(devForceEasterEgg ? '👻 Vai forçar a brincadeira na próxima abertura' : 'Forçar desativado');
 }
 
+// Interruptor principal do Modo Dev: desativa a brincadeira de hackeamento
+// por completo, para sempre, em qualquer dispositivo sincronizado com a
+// mesma planilha (porque vive em profile.easterEggDisabled, que é
+// sincronizado como parte do profile inteiro). É o botão que a pessoa
+// "assustada" usaria se descobrisse a brincadeira e quisesse desligá-la —
+// por isso o texto do toast confirma claramente que ficou sincronizado.
 async function toggleEasterEggDisabled(){
   profile.easterEggDisabled = !profile.easterEggDisabled;
   await persistProfile();
@@ -4501,12 +4827,21 @@ async function toggleEasterEggDisabled(){
   showToast(profile.easterEggDisabled ? '🚫 Brincadeira desativada (sincronizado)' : '👻 Brincadeira reativada (sincronizado)');
 }
 
+// Campo do Modo Dev para ajustar a probabilidade de a brincadeira aparecer
+// a cada abertura do app. O input mostra/recebe uma percentagem (0-100),
+// mas internamente profile.easterEggRate guarda um valor de 0 a 1 (usado
+// diretamente como probabilidade em Math.random() < rate, dentro de
+// shouldTriggerEasterEgg()). Sincronizado como parte do profile.
 async function setEasterEggRate(value){
   const pct = parseFloat(value);
   profile.easterEggRate = isNaN(pct) ? 0.03 : Math.min(1, Math.max(0, pct / 100));
   await persistProfile();
   showToast(`Taxa definida em ${(profile.easterEggRate*100).toFixed(1)}%`);
 }
+
+// =================================================================
+// FIM DA SECÇÃO "EASTER EGG"
+// =================================================================
 
 // ---------------------------------------------------------------
 // LOG DE SINCRONIZAÇÃO
