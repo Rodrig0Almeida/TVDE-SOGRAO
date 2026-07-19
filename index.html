@@ -1696,7 +1696,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // ---------------------------------------------------------------
 // APP VERSION — ⚠️ ATUALIZE ESTE NÚMERO A CADA ALTERAÇÃO NO CÓDIGO
 // ---------------------------------------------------------------
-const APP_VERSION = '3.0.3';
+const APP_VERSION = '3.0.4';
 
 // --- Browser localStorage fallback ---
 if (!window.storage) {
@@ -2018,6 +2018,9 @@ async function persistLocalOnlySilently(){
   try{ await window.storage.set('localSettings', JSON.stringify(localSettings)); }catch(e){}
 }
 
+// Mostra/esconde um indicador de "a carregar" simples (diferente do splash
+// inicial — este é um elemento inline dentro de uma tela, usado em pontos
+// específicos que ainda não têm animação própria).
 function showLoadingState(msg){
   const el = document.getElementById('loadingState');
   el.textContent = msg;
@@ -2189,6 +2192,12 @@ async function finishCloudSync(decoded){
 
 let pendingEncryptedPayload = null;
 
+// ---------------------------------------------------------------
+// FLUXO DE DESBLOQUEIO PARA DADOS ENCRIPTADOS — chamado por _doCloudSync()
+// quando recebe um payload {encrypted:true, ...} e precisa da senha para
+// decifrar. openUnlockSheet() decide entre biometria (prioridade, se
+// ativada e suportada) ou o sheet de senha manual.
+// ---------------------------------------------------------------
 function openUnlockSheet(){
   const canBio = biometricUnlockEnabled && webAuthnSupported();
   if(canBio){
@@ -2215,6 +2224,9 @@ async function triggerBiometricUnlockDirectly(){
   }
 }
 
+// Sheet manual de senha — usado quando a biometria falha/não está ativa.
+// biometricFailed muda o texto de aviso e mostra um botão para tentar a
+// biometria de novo, se ela estiver disponível.
 function openUnlockPasswordSheet(biometricFailed){
   openSheet(`
     <div class="sheet-handle"></div>
@@ -2231,6 +2243,9 @@ function openUnlockPasswordSheet(biometricFailed){
   setTimeout(()=>{ document.getElementById('unlockPasswordInput')?.focus(); }, 200);
 }
 
+// Utilizador desistiu de desbloquear — descarta o payload pendente e
+// deixa o app sem sincronizar desta vez (tenta de novo na próxima abertura
+// ou quando o utilizador tocar em "sincronizar" manualmente).
 function cancelUnlock(){
   pendingEncryptedPayload = null;
   closeSheet();
@@ -2238,6 +2253,11 @@ function cancelUnlock(){
   showToast('Sincronização cancelada');
 }
 
+// Tenta decifrar o payload pendente com a senha digitada no sheet. Se
+// funcionar, guarda a senha localmente (para não pedir de novo enquanto
+// requireUnlockEachSync estiver desligado) e aplica os dados. Se falhar,
+// mostra erro e deixa o sheet aberto para nova tentativa (não fecha
+// automaticamente em caso de senha errada).
 async function unlockWithPassword(){
   const input = document.getElementById('unlockPasswordInput');
   const pwd = input ? input.value : '';
@@ -2259,6 +2279,20 @@ async function unlockWithPassword(){
 }
 
 
+// ---------------------------------------------------------------
+// PONTO DE ENTRADA PRINCIPAL — chamado uma única vez quando o HTML termina
+// de carregar (ver o <script> no fim do ficheiro que chama loadAll()).
+// Ordem de execução, propositalmente nesta sequência:
+//   1. Carrega tudo do localStorage primeiro — o app fica utilizável
+//      instantaneamente mesmo offline, sem esperar rede nenhuma.
+//   2. Aplica tema/aparência e mostra a aba Lucro (tela inicial padrão).
+//   3. SÓ DEPOIS tenta sincronizar com a nuvem, se houver syncUrl
+//      configurada — o splash "A sincronizar…" só desaparece quando a
+//      sincronização terminar (sucesso ou falha), para o utilizador nunca
+//      ver dados desatualizados achando que já sincronizou.
+//   4. Por fim, verifica se deve mostrar alguma brincadeira secreta
+//      (maybeRunEasterEgg) — sempre por último, depois de tudo carregado.
+// ---------------------------------------------------------------
 async function loadAll(){
   const splashMsg = document.getElementById('splashMsg');
   const splash    = document.getElementById('splashScreen');
@@ -2415,6 +2449,10 @@ async function pushToCloud(migrationUrl){
   }
 }
 
+// Atualiza a "pílula" de status de sincronização visível no topo de cada
+// tela (a bolinha colorida + texto "sincronizado"/"salvando…"/"offline").
+// SYNC_PILL_SCREENS lista todas as telas que têm essa pílula — se
+// adicionares uma tela nova com a pílula, regista-a nessa constante.
 function setSyncStatus(state){
   let label, dotClass;
   if(state === 'saving'){
@@ -2486,6 +2524,14 @@ const THEME_COLORS = [
   { key:'slate',     vault:'#1A2535', vaultLight:'#2E4060', vault2:'#243050', brass:'#7090B0', brassLight:'#90B0C8', textDark:'#A8C2E0', label:'Ardósia' },
 ];
 
+// ---------------------------------------------------------------
+// APARÊNCIA (cor de destaque + modo escuro) — tudo device-only, guardado
+// em localSettings, NUNCA sincronizado com a nuvem (cada dispositivo pode
+// ter tema diferente, mesmo compartilhando os mesmos dados financeiros).
+// ---------------------------------------------------------------
+// Aplica a paleta de cores escolhida (THEME_COLORS) como CSS custom
+// properties no :root — é assim que toda a UI (botões, ícones, destaques)
+// muda de cor sem precisar de reescrever nenhum CSS estático.
 function applyThemeColor(key){
   const theme = THEME_COLORS.find(t=>t.key===key) || THEME_COLORS[0];
   const root = document.documentElement;
@@ -2497,6 +2543,8 @@ function applyThemeColor(key){
   root.style.setProperty('--brass-light', theme.brassLight);
   updateThemeColorMeta();
 }
+// Chamada pelo seletor de cores nas Configurações. Grava a escolha
+// localmente (nunca sincronizada) e aplica imediatamente.
 async function setThemeColor(key){
   localSettings.themeColor = key;
   await persistLocalSettings(); // local only — never synced
@@ -2515,6 +2563,9 @@ function updateThemeColorMeta(){
   if(metaDark)  metaDark.setAttribute('content', isDark ? '#111114' : theme.vault);
 }
 
+// Decide se o body deve ter a classe "dark" — três modos possíveis:
+// 'dark' (força escuro), 'light' (força claro), ou 'system' (padrão —
+// segue a preferência do sistema operativo via prefers-color-scheme).
 function applyDarkModeClass(){
   const mode = localSettings.darkMode || 'system';
   if(mode === 'dark'){
@@ -2527,6 +2578,7 @@ function applyDarkModeClass(){
   }
   updateThemeColorMeta();
 }
+// Chamado pelo seletor claro/escuro/sistema nas Configurações.
 async function setDarkMode(mode){
   localSettings.darkMode = mode;
   await persistLocalSettings(); // local only — never synced
@@ -2534,6 +2586,8 @@ async function setDarkMode(mode){
   renderSettings();
 }
 
+// Aplica cor de tema + modo escuro de uma vez — chamado no arranque
+// (loadAll) e sempre que qualquer uma das duas preferências muda.
 function applyAllAppearance(){
   applyThemeColor(localSettings.themeColor || 'green');
   applyDarkModeClass();
@@ -2542,14 +2596,27 @@ function applyAllAppearance(){
 // ---------------------------------------------------------------
 // SETTINGS & PROFILES
 // ---------------------------------------------------------------
+// Gera o atributo style para o avatar: se houver foto, usa-a como
+// background-image; senão fica vazio (o círculo mostra só a cor de fundo
+// padrão do CSS, com a inicial por cima via personAvatarInner()).
 function personAvatarHtml(){
   return profile.photo ? `style="background-image:url(${profile.photo});background-size:cover;background-position:center;"` : '';
 }
+// Conteúdo de texto do avatar quando não há foto: a primeira letra do
+// nome, maiúscula, ou "?" se o nome estiver vazio.
 function personAvatarInner(){
   return profile.photo ? '' : (profile.name || '?').trim().charAt(0).toUpperCase();
 }
 
 
+// Renderiza a aba Configurações inteira: perfil, taxas, cor do tema,
+// modo escuro, URL de sync, e (se devMode estiver ativo) todo o Modo Dev
+// (encriptação, biometria, log de sync, migração de planilha, brincadeiras
+// secretas, importar/exportar). É a função de render mais longa do app —
+// se adicionares uma nova opção de configuração, o padrão é sempre:
+// 1) ler o valor atual da variável/profile correspondente, 2) popular o
+// elemento HTML com esse valor, 3) o próprio elemento tem onchange/onclick
+// apontando para uma função updateX()/toggleX() que persiste a mudança.
 function renderSettings(){
   const syncUrlInput = document.getElementById('syncUrl');
   if(syncUrlInput) syncUrlInput.value = syncUrl || '';
@@ -2637,6 +2704,10 @@ function renderSettings(){
   }
 }
 
+// Chamados pelos campos de IVA/Comissão nas Configurações. Guardam a taxa
+// em profile (sincronizada) e re-renderizam Ganhos/Despesas imediatamente
+// para o utilizador ver o efeito na hora. Ver ivaAmount()/comissaoAmount()
+// mais abaixo para onde essas taxas realmente entram nos cálculos.
 function updateIvaRate(value){
   profile.ivaRate = parseFloat(value) || 0;
   persistProfile();
@@ -2652,6 +2723,10 @@ function updateComissaoRate(value){
 
 
 let profileNameTimer = null;
+// Atualiza o nome do perfil com debounce (500ms) — evita gravar/sincronizar
+// a cada tecla digitada, só quando o utilizador parar de escrever. Também
+// dispara syncAllAvatars() para atualizar a inicial mostrada em todos os
+// avatares da app (já que o nome pode ter mudado a letra inicial).
 function updateProfileName(value){
   profile.name = value;
   clearTimeout(profileNameTimer);
@@ -2708,6 +2783,11 @@ function resizeImageToDataUrl(file, size = 200){
   });
 }
 
+// Chamado ao escolher uma foto no seletor de ficheiro das Configurações.
+// Redimensiona/comprime via resizeImageToDataUrl() (200px, formato base64)
+// antes de guardar em profile.photo — importante para não estourar o
+// tamanho do payload sincronizado com a nuvem (fotos originais de câmara
+// podem ter vários MB; 200px comprimido fica na casa dos KB).
 async function handleProfilePhotoChange(inputEl){
   const file = inputEl.files && inputEl.files[0];
   if(!file) return;
@@ -2724,6 +2804,7 @@ async function handleProfilePhotoChange(inputEl){
   finally { inputEl.value = ''; }
 }
 
+// Remove a foto de perfil, voltando ao avatar de inicial (ver personAvatarInner()).
 async function removeProfilePhoto(){
   delete profile.photo;
   await persistProfile();
@@ -2760,12 +2841,19 @@ function unlockSyncUrl(){
   const input = document.getElementById('syncUrl');
   if(input){ input.value = syncUrl || ''; input.focus(); }
 }
+// Confirma o campo de URL de sync depois de digitada, guarda, e troca a UI
+// para a "vista bloqueada" (URL mascarada, para não ficar sempre visível em
+// texto puro no ecrã — ver renderSyncUrlUI logo abaixo).
 function lockSyncUrl(){
   const input = document.getElementById('syncUrl');
   if(input) syncUrl = input.value.trim();
   saveSyncUrl();
   renderSyncUrlUI();
 }
+// Alterna entre duas vistas do campo de sync: "bloqueada" (URL mascarada,
+// tipo "https://scrip…xyz123") quando já há uma URL configurada, ou "edição"
+// (input normal) quando ainda não há nenhuma. Evita a URL secreta ficar
+// sempre visível por cima do ombro de alguém.
 function renderSyncUrlUI(){
   const locked = document.getElementById('syncUrlLockedView');
   const edit   = document.getElementById('syncUrlEditView');
@@ -2813,6 +2901,12 @@ async function scheduleMigrationUrl(){
   renderSettings();
 }
 
+// Importa dados manualmente de um JSON colado (Modo Dev → Importar dados) —
+// usado como alternativa quando a sincronização automática falha. Tenta o
+// parse direto primeiro; se falhar, tenta normalizar problemas comuns de
+// copiar/colar de fontes diferentes (ver comentários inline abaixo) antes
+// de desistir. Aplica os dados exatamente como applyCloudData() faria com
+// dados vindos da sincronização normal — o resultado é indistinguível.
 async function importFromJson(){
   let raw = (document.getElementById('importJsonInput')?.value || '').trim();
   if(!raw){ showToast('Cole o JSON antes de importar'); return; }
@@ -2853,6 +2947,9 @@ async function importFromJson(){
   renderGanhos();
   renderSettings();
 }
+// Apaga TODOS os dados financeiros (bills e monthData) permanentemente —
+// pede confirmação explícita antes, já que não há undo. NÃO apaga profile
+// (nome, foto, taxas, configurações de segurança) nem localSettings (tema).
 async function confirmResetAll(){
   if(!confirm('Isso vai apagar TODOS os dados. Tem certeza?')) return;
   bills = []; monthData = {};
@@ -2863,14 +2960,22 @@ async function confirmResetAll(){
 // ---------------------------------------------------------------
 // STATS / CHARTS
 // ---------------------------------------------------------------
+// Devolve as N chaves de mês mais recentes que já têm dados, ordenadas
+// cronologicamente (mais antiga primeiro) — usado nos gráficos de
+// "evolução dos últimos meses".
 function lastNMonthKeys(n){
   return Object.keys(monthData).sort().slice(-n);
 }
+// Label curto para gráficos de múltiplos meses (ex: "jun 26").
 function monthShortLabel(key){
   const [y,m] = key.split('-').map(Number);
   const shortMonth = new Date(y, m-1, 1).toLocaleDateString('pt-BR', { month:'short' }).replace('.','');
   return `${shortMonth} ${String(y).slice(2)}`;
 }
+// Envolve qualquer conteúdo de gráfico (SVG, barras, etc.) num card
+// consistente com título e subtítulo — usado por praticamente todos os
+// gráficos da app (Estatísticas, Lucro). "inner" é HTML já pronto (ex: o
+// resultado de groupedBarSVG() logo abaixo).
 function chartBoxWrap(title, sub, inner){
   return `<div class="chart-box">
     <div class="chart-box-title">${escapeHtml(title)}</div>
@@ -2966,12 +3071,20 @@ function weekOfMonthFromDateStr(dateStr){
   const day = parseInt(dateStr.split('-')[2], 10);
   return Math.min(5, Math.ceil(day / 7));
 }
+// Nº de semanas "civis" num mês (usado para dividir despesas fixas
+// igualmente entre semanas nos gráficos). Arredonda para cima — um mês de
+// 31 dias conta como 5 semanas, mesmo que a última seja parcial.
 function weeksInMonth(key){
   const [y,m] = key.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   return Math.ceil(daysInMonth / 7);
 }
 
+// ---------------------------------------------------------------
+// NAVEGAÇÃO DA ABA ESTATÍSTICAS — troca entre as visões Dia/Semana/Mês/Ano,
+// mostrando/escondendo a barra de navegação certa para cada uma (setas de
+// dia/semana vs. seletor de mês vs. seletor de ano).
+// ---------------------------------------------------------------
 function setStatsView(v){
   statsView = v;
   document.querySelectorAll('#statsViewSeg .seg-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
@@ -2980,10 +3093,12 @@ function setStatsView(v){
   document.getElementById('statsDayWeekNav').style.display = (v === 'dia' || v === 'semana') ? 'flex' : 'none';
   renderStats();
 }
+// Avança/recua o dia ou semana de referência (delta em dias; ×7 se a visão for semana).
 function changeStatsDayWeek(delta){
   statsRefDate = addDays(statsRefDate, statsView === 'semana' ? delta*7 : delta);
   renderStats();
 }
+// Avança/recua o ano de referência na visão Ano.
 function changeStatsYear(delta){
   statsRefYear += delta;
   document.getElementById('statsLabelAno').textContent = String(statsRefYear);
@@ -3117,6 +3232,9 @@ function renderStatsDay(){
   box.innerHTML = html;
 }
 
+// Visão Semana das Estatísticas — mesma fórmula de líquido/lucro que
+// renderStatsDay(), mas agregada sobre os 7 dias da semana (startOfWeek
+// até +6 dias). Também desenha um gráfico de barras por dia da semana.
 function renderStatsWeek(){
   const start = startOfWeek(statsRefDate);
   const end   = addDays(start, 6);
@@ -3189,6 +3307,12 @@ function renderStatsWeek(){
   box.innerHTML = html;
 }
 
+// Visão Mês das Estatísticas — a mais completa das quatro visões: mostra
+// cards de resumo TVDE/Pessoal, gráfico Ganhos vs. Despesas por semana
+// dentro do mês, e gráfico de evolução dos últimos 6 meses (lastNMonthKeys).
+// Usa a mesma fórmula de líquido que renderMonthSummary()/renderLucroMonth()
+// — se mudares a fórmula fiscal (ivaAmount/comissaoAmount), confirma que as
+// três continuam consistentes entre si.
 function renderStatsMonth(){
   const [curY, curM] = currentMonthKey.split('-').map(Number);
   const monthNameYear = new Date(curY, curM-1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
@@ -3359,6 +3483,9 @@ function renderStatsMonth(){
   box.innerHTML = html;
 }
 
+// Visão Ano das Estatísticas — soma os 12 meses do ano em exibição
+// (statsRefYear), mostra os mesmos cards de resumo que a visão Mês, e um
+// gráfico de barras por mês (Jan-Dez) em vez de por semana.
 function renderStatsYear(){
   const yearLabel = String(statsRefYear);
   document.getElementById('statsLabelAno').textContent = yearLabel;
@@ -3487,6 +3614,11 @@ function renderStatsYear(){
   box.innerHTML = html;
 }
 
+// Dispatcher: chama a função de render certa conforme a visão atual
+// (statsView), definida por setStatsView(). Chamado sempre que algo pode
+// ter mudado os dados (navegação, edição) e a aba Estatísticas precisa de
+// se atualizar — nunca chames renderStatsDay()/Week()/etc diretamente de
+// fora desta função, para não perder sincronia com o segmento ativo.
 function renderStats(){
   if(statsView === 'dia') renderStatsDay();
   else if(statsView === 'semana') renderStatsWeek();
@@ -3504,6 +3636,7 @@ function setLucroView(v){
   document.getElementById('lucroDayWeekNav').style.display = (v === 'mes') ? 'none' : 'flex';
   renderLucro();
 }
+// Navegação da aba Lucro (dia/semana) — mesmo padrão de changeGanhosDayWeek/changeStatsDayWeek.
 function changeLucroDayWeek(delta){
   lucroRefDate = addDays(lucroRefDate, lucroView === 'semana' ? delta*7 : delta);
   renderLucro();
@@ -3562,6 +3695,8 @@ function lucroBreakdownHTML(apps, comb, part, fixas, varOther, km, hours, contex
 
   return html;
 }
+// Uma linha do "waterfall" de detalhamento em lucroBreakdownHTML() — valores
+// negativos ficam em vermelho com um "−" na frente; positivos em cor normal.
 function lucroLineHTML(label, value, isDeduction, bg, isBig){
   const color = isDeduction ? 'var(--terracotta)' : 'var(--vault)';
   return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);">
@@ -3570,6 +3705,9 @@ function lucroLineHTML(label, value, isDeduction, bg, isBig){
   </div>`;
 }
 
+// Visão Dia da aba Lucro — monta os dados do dia e chama
+// lucroBreakdownHTML() para o detalhamento completo (a fórmula em si vive
+// lá, não aqui).
 function renderLucroDay(){
   const dateIso = isoDate(lucroRefDate);
   const isToday = dateIso === isoDate(new Date());
@@ -3602,6 +3740,8 @@ function renderLucroDay(){
   box.innerHTML = html;
 }
 
+// Visão Semana da aba Lucro — igual a renderLucroDay(), mas agregando os
+// 7 dias e mostrando também um gráfico de barras por dia.
 function renderLucroWeek(){
   const start   = startOfWeek(lucroRefDate);
   const end     = addDays(start, 6);
@@ -3644,6 +3784,9 @@ function renderLucroWeek(){
   box.innerHTML = html;
 }
 
+// Visão Mês da aba Lucro — a mais completa: detalhamento do mês inteiro
+// via lucroBreakdownHTML(), mais gráfico de lucro por semana dentro do mês
+// e gráfico de evolução dos últimos 6 meses.
 function renderLucroMonth(){
   const [curY, curM] = currentMonthKey.split('-').map(Number);
   const monthNameYear = new Date(curY, curM-1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
@@ -3705,6 +3848,8 @@ function renderLucroMonth(){
   box.innerHTML = html;
 }
 
+// Dispatcher da aba Lucro — mesmo padrão de renderStats() acima. Chama a
+// visão certa conforme lucroView (definida por setLucroView).
 function renderLucro(){
   if(lucroView === 'dia') renderLucroDay();
   else if(lucroView === 'semana') renderLucroWeek();
@@ -3744,6 +3889,10 @@ function openMonthPicker(){
   `);
   renderMonthPicker();
 }
+// ---------------------------------------------------------------
+// SELETOR DE MÊS (sheet aberto ao tocar no título do mês) — grade de 12
+// meses para o ano em `pickerYear`, com navegação de ano.
+// ---------------------------------------------------------------
 function changePickerYear(delta){ pickerYear += delta; renderMonthPicker(); }
 function renderMonthPicker(){
   const [curY, curM] = currentMonthKey.split('-').map(Number);
@@ -3767,11 +3916,17 @@ function renderMonthPicker(){
     <div class="month-picker-grid">${cells}</div>
   `;
 }
+// Confirma a escolha do mês, atualiza currentMonthKey (a variável global
+// que praticamente toda a app usa para saber "qual mês estamos a ver") e
+// re-renderiza as três abas que dependem diretamente dela.
 function pickMonth(key){
   currentMonthKey = key;
   renderGanhos(); renderDespesas(); renderStats();
   closeSheet();
 }
+// Atualiza a dica de "recebi em X para usar em Y" perto do seletor de mês
+// em Despesas — lembra o utilizador que as despesas fixas de um mês
+// geralmente referem-se a rendimentos do mês anterior.
 function updateMonthHint(){
   const [y,m] = currentMonthKey.split('-').map(Number);
   let py = y, pm = m - 1; if(pm === 0){ pm = 12; py = y - 1; }
@@ -3780,6 +3935,9 @@ function updateMonthHint(){
   document.getElementById('monthHintMes').textContent = `recebi em ${prevLabel} para usar em ${currLabel}`;
 }
 
+// Devolve o "selo" visual (círculo colorido com letra/ícone) de uma
+// plataforma — usado em listas de ganhos e cards de resumo. "size" em
+// pixels, opcional (padrão 22px).
 function platformBadge(platform, size){
   size = size || 22;
   if(platform === 'uber'){
@@ -3793,15 +3951,22 @@ function platformBadge(platform, size){
   }
   return `<div class="platform-badge" style="width:${size}px;height:${size}px;font-size:${size*0.55}px;background:#8A6B5A;color:#fff;">O</div>`;
 }
+// Nome legível da plataforma para exibição em texto.
 function platformLabel(platform){
   if(platform === 'uber') return 'Uber';
   if(platform === 'bolt') return 'Bolt';
   if(platform === 'particular') return 'Particular';
   return 'Outros';
 }
+// Dia da semana abreviado (ex: "seg", sem o ponto final que o pt-BR adiciona).
 function weekdayLabel(d){ return d.toLocaleDateString('pt-BR', { weekday:'short' }).replace('.',''); }
+// Dia + mês abreviado (ex: "08 jun").
 function dayMonthLabel(d){ return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).replace('.',''); }
 
+// ---------------------------------------------------------------
+// NAVEGAÇÃO DA ABA GANHOS — mesmo padrão de setStatsView(), mas Ganhos só
+// tem Dia/Semana/Mês (sem visão Ano).
+// ---------------------------------------------------------------
 function setGanhosView(v){
   ganhosView = v;
   document.querySelectorAll('#ganhosViewSeg .seg-opt').forEach(el => el.classList.toggle('active', el.dataset.v === v));
@@ -3814,6 +3979,8 @@ function changeGanhosDayWeek(delta){
   renderGanhos();
 }
 
+// Renderiza uma lista simples de ganhos (usada nas visões Dia/Semana), com
+// mensagem alternativa se a lista estiver vazia.
 function renderEarningsList(items, emptyMsg){
   if(items.length === 0) return `<div class="empty-note">${emptyMsg}</div>`;
   return items.map(it => `
@@ -3827,6 +3994,11 @@ function renderEarningsList(items, emptyMsg){
       <div class="bill-delete" onclick="removeEarning('${it.id}')">✕</div>
     </div>`).join('');
 }
+// Monta os cards de totais por plataforma (Uber, Bolt, Particular, Outros)
+// mais o resumo financeiro completo — usado pelas 3 visões de Ganhos
+// (Dia/Semana/Mês), cada uma passando os items/fixedTotal/expenses já
+// filtrados para o período certo. Aplica a mesma fórmula de líquido que
+// renderMonthSummary()/lucroBreakdownHTML() — mantém consistência entre abas.
 function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   const totalUber = sumByPlatform(items, 'uber');
   const totalBolt = sumByPlatform(items, 'bolt');
@@ -3886,6 +4058,8 @@ function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   if(msEl) msEl.innerHTML = summaryHtml;
 }
 
+// Visão Dia de Ganhos — lista simples do dia. fixedTotal é forçado a 0
+// porque despesas fixas são sempre mensais, não fazem sentido "por dia".
 function renderGanhosDay(){
   const dateIso = isoDate(ganhosRefDate);
   const isToday = dateIso === isoDate(new Date());
@@ -3901,6 +4075,8 @@ function renderGanhosDay(){
   const fixedTotal = 0; // bills are monthly, don't apply to a single-day view
   renderEarningsCardsAndSummary(items, fixedTotal, variableExpensesInRange(dateIso, dateIso));
 }
+// Visão Semana de Ganhos — agrupa os ganhos por dia da semana (só mostra
+// dias que têm algo, dias vazios são omitidos da lista para não poluir).
 function renderGanhosWeek(){
   const start = startOfWeek(ganhosRefDate);
   const endD  = addDays(start, 6);
@@ -3927,11 +4103,15 @@ function renderGanhosWeek(){
     `<div class="add-dashed-btn" style="border-style:solid;margin-top: 20px;" onclick="openAddIncomeSheet()">＋ Adicionar ganho da semana</div>`;
   renderEarningsCardsAndSummary(items, 0, variableExpensesInRange(startIso, endIso));
 }
+// Alterna entre a "tela vazia" (sem ganhos ainda) e o conteúdo normal —
+// usado pelas 3 visões de Ganhos para evitar mostrar cards zerados sem sentido.
 function toggleGanhosEmptyState(hasItems){
   document.getElementById('noIncomeState').style.display = hasItems ? 'none' : 'block';
   document.getElementById('mainMonthContent').style.display = hasItems ? 'block' : 'none';
 }
 
+// Visão Mês de Ganhos (a padrão ao abrir a aba) — mostra todos os ganhos
+// do mês corrente, cards de totais, e o resumo financeiro completo.
 function renderGanhosMonth(){
   document.getElementById('monthLabelMes').textContent = monthLabelFor(currentMonthKey);
   updateMonthHint();
@@ -3946,12 +4126,17 @@ function renderGanhosMonth(){
   renderEarningsCardsAndSummary(items, totalFixedBills(entry), entry.variableExpenses);
 }
 
+// Dispatcher da aba Ganhos — mesmo padrão de renderStats()/renderLucro().
 function renderGanhos(){
   if(ganhosView === 'dia') renderGanhosDay();
   else if(ganhosView === 'semana') renderGanhosWeek();
   else renderGanhosMonth();
 }
 
+// Abre o sheet de "Novo ganho". A data padrão sugerida e o texto de
+// instrução mudam conforme a visão ativa (dia/semana/mês) — na visão dia,
+// já vem preenchida com a data que se está a ver; nas outras, o utilizador
+// escolhe a data manualmente dentro do sheet.
 function openAddIncomeSheet(){
   // Default date depends on which view is active
   let defaultDate, sheetSub;
@@ -4004,10 +4189,20 @@ function openAddIncomeSheet(){
     <button class="btn btn-ghost" onclick="closeSheet()">Cancelar</button>
   `);
 }
+// Marca visualmente qual plataforma está selecionada no seletor de
+// plataforma (usado noutros contextos que não o sheet multi-valor de
+// "Novo ganho" — ali cada plataforma tem o seu próprio campo, sem seletor).
 function pickPlatform(p){
   window._pendingPlatform = p;
   document.querySelectorAll('#platformPick .platform-pick-opt').forEach(el => el.classList.toggle('active', el.dataset.p === p));
 }
+// Confirma o sheet de "Novo ganho": lê os 4 campos (Uber, Bolt, Particular,
+// Outros) e cria um earning separado para cada um que tiver valor > 0 —
+// permite lançar o dia inteiro de uma vez, sem abrir o sheet várias vezes.
+// Os timestamps (Date.now()+1, +2, +3) garantem ordem estável de exibição
+// mesmo quando várias entradas são criadas no mesmíssimo milissegundo.
+// monthKeyOfDate é derivado da data escolhida, não do mês em exibição —
+// permite lançar ganhos retroativos em meses anteriores.
 async function confirmAddIncome(){
   const date = document.getElementById('incDate').value;
   if(!date){ showToast('Selecione a data'); return; }
@@ -4026,6 +4221,9 @@ async function confirmAddIncome(){
   if(outrosAmt > 0) entry.earnings.push({ id: uid(), date, platform:'outros',     amount: outrosAmt, km:0, hours:0, noIva:true, ts: Date.now()+3 });
   await persistMonthData(); closeSheet(); renderGanhos();
 }
+// Remove um earning pelo ID, procurando em TODOS os meses (não só o atual)
+// porque a lista de ganhos exibida pode incluir dias de um mês vizinho
+// (visão Semana pode atravessar a fronteira de mês).
 async function removeEarning(id){
   if(!confirm('Remover este ganho?')) return;
   Object.keys(monthData).forEach(k => {
@@ -4034,6 +4232,10 @@ async function removeEarning(id){
   await persistMonthData(); renderGanhos();
 }
 
+// Renderiza a aba Despesas inteira para o mês corrente: título, contas
+// fixas (via renderBills) e a lista de despesas variáveis, mais recente
+// primeiro. Ao contrário de Ganhos/Estatísticas/Lucro, Despesas não tem
+// visões Dia/Semana/Ano — é sempre por mês.
 function renderDespesas(){
   document.getElementById('despesasMonthLabel').textContent = monthLabelFor(currentMonthKey);
   document.getElementById('despesasMonthHint').textContent = '';
@@ -4064,6 +4266,11 @@ function renderDespesas(){
 
   renderMonthSummary(entry);
 }
+// ---------------------------------------------------------------
+// DESPESAS VARIÁVEIS — sheet de criação, com campo extra (litros) que só
+// aparece para a categoria "combustivel" (usado como referência pessoal do
+// utilizador, não entra em nenhum cálculo do app).
+// ---------------------------------------------------------------
 function openNewExpenseSheet(){
   const today = isoDate(new Date());
   openSheet(`
@@ -4079,10 +4286,14 @@ function openNewExpenseSheet(){
     <button class="btn btn-ghost" onclick="closeSheet()">Cancelar</button>
   `);
 }
+// Mostra/esconde o campo de litros conforme a categoria escolhida no sheet.
 function onExpenseCategoryChange(){
   const cat = document.getElementById('newExpenseCategory').value;
   document.getElementById('fuelLitersField').style.display = cat === 'combustivel' ? 'block' : 'none';
 }
+// Confirma o sheet de nova despesa. expMonthKey vem da data escolhida (não
+// do mês em exibição), permitindo lançar despesas retroativas — igual ao
+// padrão usado em confirmAddIncome().
 async function confirmNewExpense(){
   const category = document.getElementById('newExpenseCategory').value;
   const amount    = parseFloat(document.getElementById('newExpenseAmount').value);
@@ -4099,6 +4310,9 @@ async function confirmNewExpense(){
   entry.variableExpenses.push(exp);
   await persistMonthData(); closeSheet(); showToast('Despesa registrada'); renderDespesas();
 }
+// Remove uma despesa variável pelo ID, varrendo todos os meses (mesma razão
+// que removeEarning() — a despesa pode ter sido lançada num mês diferente
+// do que está atualmente em exibição).
 async function deleteVariableExpense(id){
   if(!confirm('Remover esta despesa?')) return;
   // Scan ALL months — an expense might have been recorded with a date from a different month
@@ -4111,6 +4325,10 @@ async function deleteVariableExpense(id){
 }
 
 
+// Renderiza a lista de despesas fixas visíveis para o mês corrente — usa o
+// mesmo filtro de visibilidade que totalFixedBills() (createdMonthKey <=
+// mês atual, e não ocultada neste mês). Cada linha mostra o valor (editável
+// inline via updateBillAmount), botão pagar/despagar, e apagar.
 function renderBills(entry){
   const visibleBills = bills.filter(b => (!b.createdMonthKey || b.createdMonthKey <= currentMonthKey) && !entry.hiddenBills[b.id]);
   document.getElementById('billsCount').textContent = visibleBills.length + (visibleBills.length===1?' conta':' contas');
@@ -4137,23 +4355,36 @@ function renderBills(entry){
   }
 }
 
+// ---------------------------------------------------------------
+// AÇÕES SOBRE BILLS (contas fixas) — marcar como paga, editar valor deste
+// mês, apagar por completo. Cada uma grava e re-renderiza Despesas.
+// ---------------------------------------------------------------
+// Marca a bill como paga NESTE mês (guarda o valor exato pago + timestamp
+// em entry.billsPaid). Não afeta outros meses.
 async function payBill(billId){
   const entry = ensureMonthEntry(currentMonthKey);
   const bill  = bills.find(x => x.id === billId); if(!bill) return;
   entry.billsPaid[billId] = { amount: billAmount(entry, bill), ts: Date.now() };
   await persistMonthData(); showToast('Conta paga'); renderDespesas();
 }
+// Desfaz o pagamento (volta a mostrar como pendente neste mês).
 async function unpayBill(billId){
   const entry = ensureMonthEntry(currentMonthKey);
   delete entry.billsPaid[billId];
   await persistMonthData(); renderDespesas();
 }
+// Define um valor customizado para esta bill SÓ neste mês (billOverrides) —
+// não altera o defaultAmount da bill, que continua igual nos outros meses.
 async function updateBillAmount(billId, value){
   const entry = ensureMonthEntry(currentMonthKey);
   entry.billOverrides[billId] = parseFloat(value) || 0;
   await persistMonthData(); renderDespesas();
 }
 
+// Apaga a bill PERMANENTEMENTE (de todos os meses, não só do atual) — pede
+// confirmação antes. Limpa também qualquer rastro dela em billOverrides,
+// billsPaid e hiddenBills de TODOS os meses, para não deixar referências
+// órfãs a um ID que já não existe mais em `bills`.
 async function deleteBill(billId){
   if(!confirm('Apagar esta despesa fixa?')) return;
   bills = bills.filter(b => b.id !== billId);
@@ -4169,6 +4400,10 @@ async function deleteBill(billId){
   renderSettings(); // Atualiza a aba Configurações (caso estivesse restaurando algo)
 }
 
+// Abre o sheet de "Nova despesa fixa". window._pendingBillFreq guarda a
+// frequência escolhida temporariamente (diária/semanal/mensal) até o
+// utilizador confirmar com createBill() — é global porque o sheet é HTML
+// solto sem estado próprio de componente.
 function openNewBillSheet(){
   openSheet(`
     <div class="sheet-handle"></div>
@@ -4190,6 +4425,9 @@ function openNewBillSheet(){
   `);
   window._pendingBillFreq = 'diaria';
 }
+// Atualiza a seleção visual de frequência no sheet, e ajusta o texto de
+// label/dica conforme a frequência escolhida (o valor digitado significa
+// coisas diferentes: por dia, por semana, ou fixo mensal).
 function pickBillFreq(f){
   window._pendingBillFreq = f;
   document.querySelectorAll('#newBillFreqSeg .seg-opt').forEach(el => el.classList.toggle('active', el.dataset.f === f));
@@ -4206,6 +4444,9 @@ function pickBillFreq(f){
     hint.textContent = 'Valor fixo mensal.';
   }
 }
+// Confirma a criação da bill nova a partir dos campos do sheet.
+// createdMonthKey fica gravado como o mês atual — é isso que impede a bill
+// de aparecer retroativamente em meses anteriores (ver totalFixedBills()).
 async function createBill(){
   const name   = document.getElementById('newBillName').value.trim();
   const amount = parseFloat(document.getElementById('newBillAmount').value) || 0;
@@ -4215,6 +4456,11 @@ async function createBill(){
   await persistBills(); closeSheet(); showToast('Adicionado com sucesso'); renderDespesas();
 }
 
+// Copia para o mês atual quais bills estão ocultas (hiddenBills) e quais
+// têm valor customizado (billOverrides) no mês ANTERIOR. Útil quando o
+// utilizador ocultou várias contas antigas duplicadas num mês e não quer
+// repetir manualmente essa configuração todo mês seguinte. NÃO copia
+// billsPaid (pagamentos são sempre específicos de cada mês, nunca herdados).
 function importPreviousMonthBills(){
   const prevKey   = previousMonthKey(currentMonthKey);
   const prevEntry = monthData[prevKey];
@@ -4416,6 +4662,10 @@ function toggleEncryption(){
   showToast(encryptionEnabled ? '🔒 Encriptação ativada' : '🔓 Encriptação desativada');
   pushToCloud();
 }
+// Troca a senha de encriptação (pede via prompt) e força um novo push
+// imediato — a partir daí, a planilha passa a ser cifrada com a nova senha.
+// Qualquer outro dispositivo que ainda tiver a senha antiga guardada vai
+// falhar ao decifrar na próxima sincronização e terá de digitar a nova.
 function changeEncryptionPassword(){
   const pwd = prompt('Nova senha de encriptação:\n(Isto vai re-encriptar os dados na próxima sincronização.)');
   if(!pwd) return;
@@ -4438,6 +4688,12 @@ function webAuthnSupported(){
     && typeof navigator.credentials?.create === 'function';
 }
 
+// Liga/desliga o desbloqueio biométrico. Exige encriptação já ativa com
+// senha definida (a biometria não tem sentido sem algo a proteger). Ao
+// ativar pela primeira vez, regista uma credencial WebAuthn "platform"
+// (Face ID/Touch ID/digital) neste dispositivo especificamente — a
+// credencial NÃO é sincronizada, cada aparelho tem a sua própria. Ao
+// desativar, apaga essa credencial local (não afeta a senha guardada).
 async function toggleBiometricUnlock(){
   if(!webAuthnSupported()){
     const note = document.getElementById('biometricUnsupportedNote');
@@ -4490,6 +4746,11 @@ async function toggleBiometricUnlock(){
   }
 }
 
+// Liga/desliga se o desbloqueio (senha ou biometria) deve ser pedido a
+// CADA sincronização, mesmo já tendo a senha guardada. Desligado (padrão):
+// decifra automaticamente em segundo plano usando a senha já conhecida.
+// Ligado: sempre interrompe para confirmar, mesmo sem necessidade técnica —
+// serve como camada extra de "não decifrar sem eu perceber".
 async function toggleRequireUnlockEachSync(){
   requireUnlockEachSync = !requireUnlockEachSync;
   try{ await window.storage.set('requireUnlockEachSync', requireUnlockEachSync); }catch(e){}
@@ -4868,6 +5129,9 @@ function renderSyncLog(){
   }).join('');
 }
 
+// Monta o texto completo do log (cabeçalho com versão/dispositivo/data +
+// todas as entradas de syncLog formatadas). Usado tanto por exportSyncLog()
+// quanto para gerar o ficheiro de download de fallback.
 function buildSyncLogText(){
   const lines = syncLog.map(e => {
     const iso = new Date(e.ts).toISOString();
@@ -4909,6 +5173,7 @@ async function exportSyncLog(){
   showToast('📤 Log exportado');
 }
 
+// Apaga o histórico de log local (pede confirmação, é irreversível).
 async function clearSyncLog(){
   if(!confirm('Limpar todo o log de sincronização?')) return;
   syncLog = [];
@@ -4958,6 +5223,14 @@ function tapVersion(){
   devTapTimer = setTimeout(()=>{ devTapCount = 0; }, 1500);
 }
 
+// Botão "Procurar atualização" no Modo Dev. Como este é um app estático de
+// ficheiro único (sem sistema de build/deploy real), a "verificação" busca
+// a PRÓPRIA página publicada (com cache-busting via ?v=timestamp e
+// cache:'no-store') e lê a constante APP_VERSION dali via regex — nunca
+// executa o HTML recebido, só extrai o texto. Se a versão remota for
+// diferente, oferece recarregar a página (que vai buscar o ficheiro novo,
+// de novo com bypass de cache). Não há download nem instalação — é só
+// forçar o browser a buscar a versão mais recente do mesmo URL.
 async function checkForUpdates(){
   const btn = document.getElementById('checkUpdateBtn');
   const res = document.getElementById('updateResult');
@@ -5001,17 +5274,27 @@ async function checkForUpdates(){
   }
 }
 
+// Liga/desliga o Modo Dev (ativado tocando 5x na versão nas Configurações —
+// ver tapVersion()). Ao desligar, também esconde os dados ocultos (por
+// segurança/limpeza, não deixa aquela vista aberta escondida).
 function toggleDevMode(){
   devMode = !devMode;
   if(!devMode) showHiddenData = false;
   renderSettings();
 }
 
+// Mostra/esconde a lista de "dados ocultos" (bills ocultadas, registos
+// antigos) dentro do Modo Dev — ver renderHiddenDataList() logo abaixo.
 function toggleHiddenMode() {
   showHiddenData = !showHiddenData;
   renderSettings();
 }
 
+// Lista de "dados ocultos" do Modo Dev — mostra TODOS os ganhos e despesas
+// variáveis de TODOS os meses (não só o atual) junto com as bills ocultadas
+// no mês corrente, cada um com botão de apagar/restaurar. Serve como
+// ferramenta de limpeza para encontrar e remover registos antigos/errados
+// que não apareceriam nas visões normais (que filtram por período).
 function renderHiddenDataList() {
   let html = '<div class="loans-box" style="padding:10px 14px; max-height: 400px; overflow-y: auto;">';
   
@@ -5076,6 +5359,8 @@ async function removeExpenseFromSettings(id) {
   renderSettings(); // Atualiza a lista na tela
 }
 
+// Remove a marca de "oculta" de uma bill no mês corrente — volta a contar
+// no total de despesas fixas e a aparecer na lista normal de Despesas.
 async function restoreHiddenBill(billId) {
   const entry = ensureMonthEntry(currentMonthKey);
   delete entry.hiddenBills[billId];
@@ -5086,6 +5371,10 @@ async function restoreHiddenBill(billId) {
 
 
 let toastTimer = null;
+// Mostra um "toast" (notificação flutuante temporária) com a mensagem
+// dada — usado em toda a app para feedback de ações (salvar, apagar,
+// erros). Reseta o temporizador a cada chamada, então toasts rápidos em
+// sequência substituem o anterior em vez de empilhar.
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
