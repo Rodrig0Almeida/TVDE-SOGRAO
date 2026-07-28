@@ -205,7 +205,45 @@ info) localmente, útil para diagnosticar problemas sem acesso direto ao
 dispositivo do utilizador. Exportável via `navigator.share()` (folha nativa
 no iOS/Android) com fallback para download de `.txt`.
 
-## 9. Alterações desta versão (v3.1.0)
+## 9. Atualização automática e silenciosa (na abertura)
+
+A partir da v3.2.1, o app **não pergunta nada** — se encontrar uma versão
+mais nova publicada, atualiza-se sozinho, e só avisa depois de já ter
+acontecido.
+
+Como o app é um ficheiro estático (sem service worker/PWA de verdade), a
+"atualização" é simplesmente recarregar a página com bypass de cache. Isso
+exige dois passos, feitos em duas aberturas diferentes do app:
+
+1. **`checkForUpdatesOnStartup()`** — roda no fim de `loadAll()`, depois de
+   tudo o resto (dados locais, sincronização, easter eggs) já ter
+   carregado, para não atrasar nada. Busca a própria página (bypass de
+   cache) e lê a constante `APP_VERSION` publicada via regex — a mesma
+   técnica do botão manual "Procurar atualização" no Modo Dev, mas sem
+   depender dele.
+   - Se a versão remota for igual à local, não faz nada.
+   - Se for diferente, grava essa versão em `pendingUpdateNotice`
+     (device-local, via `window.storage`) e recarrega a página
+     imediatamente com `location.replace(...)` — sem `confirm()`, sem
+     sheet, sem esperar por nenhuma ação do utilizador.
+   - Se a rede falhar ou a página não responder, falha silenciosamente e
+     tenta de novo na próxima abertura.
+
+2. **`maybeShowUpdateAppliedNotice()`** — roda logo no início da abertura
+   seguinte, já com a página recarregada (portanto já na versão nova). Se
+   houver um `pendingUpdateNotice` pendente:
+   - Se a versão atual bater com a marcada, mostra um toast simples —
+     `✅ Atualizado para vX.X.X` — confirmando que já aconteceu.
+   - A marca é sempre apagada depois de lida, para o aviso não repetir.
+   - Se por algum motivo a versão não bater (ex: o reload não chegou a
+     pegar a versão nova), descarta silenciosamente sem avisar; a próxima
+     verificação de startup tenta de novo naturalmente.
+
+O botão manual "Procurar atualização" no Modo Dev continua a existir e
+mantém o comportamento antigo (pergunta via `confirm()`), útil para forçar
+uma verificação imediata sem esperar pela próxima abertura.
+
+## 10. Alterações desta versão (v3.1.0 → v3.2.0)
 
 - **Logo da tela de carregamento**: corrigido para ser byte-idêntico ao
   ícone real do app (favicon/manifest/apple-touch-icon) — antes usava uma
@@ -222,3 +260,7 @@ no iOS/Android) com fallback para download de `.txt`.
 - **Documentação**: os grandes blocos de comentário explicativo em
   português foram removidos do `corridaplus.html` e movidos para este
   ficheiro, deixando o HTML principal mais leve.
+- **Verificação automática de atualização**: o app agora se atualiza
+  sozinho quando encontra uma versão nova publicada, sem perguntar nada —
+  o aviso de "atualizado" só aparece depois, na abertura seguinte. Ver
+  secção 9.
