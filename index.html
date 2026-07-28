@@ -853,7 +853,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // Corrida+ — lógica do app.
 // Documentação detalhada de arquitetura, sincronização, encriptação e
 // easter eggs: ver corridaplus-docs.md (ficheiro separado).
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.1';
 
 if (!window.storage) {
   window.storage = {
@@ -1267,7 +1267,18 @@ async function loadAll(){
     hideSplash();
   }
 
+  // Se a última abertura disparou um auto-update, este é o primeiro
+  // carregamento já com a versão nova — avisa com um toast simples,
+  // sem perguntar nada.
+  await maybeShowUpdateAppliedNotice();
+
   await maybeRunEasterEgg();
+
+  // Verificação silenciosa de atualização: se houver uma versão mais nova
+  // publicada, atualiza sozinho (recarrega a página), sem perguntar nada
+  // ao utilizador. O aviso de "atualizado" só aparece na abertura seguinte,
+  // já com a versão nova (ver maybeShowUpdateAppliedNotice acima).
+  checkForUpdatesOnStartup();
 }
 
 async function persistProfile()   { await safeSet('profile',   profile);   }
@@ -3466,6 +3477,58 @@ async function checkForUpdates(){
     if(btn) btn.disabled = false;
   }
 }
+// ---------------------------------------------------------------
+// ATUALIZAÇÃO AUTOMÁTICA E SILENCIOSA (na abertura do app)
+// Não pergunta nada ao utilizador. Fluxo em duas partes, porque a
+// atualização em si exige recarregar a página:
+//
+// 1) checkForUpdatesOnStartup() — roda no fim de loadAll(). Busca a
+//    própria página (bypass de cache) e lê APP_VERSION via regex, igual ao
+//    botão manual do Modo Dev. Se encontrar uma versão diferente, guarda
+//    essa versão em `pendingUpdateNotice` (device-local) e recarrega a
+//    página imediatamente (location.replace) — sem confirm(), sem sheet.
+// 2) maybeShowUpdateAppliedNotice() — roda no INÍCIO da abertura seguinte
+//    (já com a página recarregada, portanto já na versão nova). Se houver
+//    um `pendingUpdateNotice` pendente, mostra um toast simples confirmando
+//    que a atualização já foi aplicada, e limpa a marca.
+//
+// Isto evita perguntar "quer atualizar?" — a atualização já aconteceu
+// sozinha; o utilizador só fica a saber depois, de forma discreta.
+// ---------------------------------------------------------------
+async function checkForUpdatesOnStartup(){
+  try{
+    const url  = location.href.split('?')[0] + '?v=' + Date.now();
+    const resp = await fetch(url, { cache: 'no-store' });
+    if(!resp.ok) return;
+    const html = await resp.text();
+    const match = html.match(/const APP_VERSION\s*=\s*'([^']+)'/);
+    const remoteVersion = match ? match[1] : null;
+    if(!remoteVersion || remoteVersion === APP_VERSION) return;
+
+    try{ await window.storage.set('pendingUpdateNotice', remoteVersion); }catch(e){}
+    location.replace(location.href.split('?')[0] + '?v=' + Date.now());
+  }catch(e){
+    // Falha silenciosa — sem rede ou página inacessível não deve incomodar
+    // o utilizador logo na abertura do app; tenta de novo na próxima.
+  }
+}
+
+// Mostra o aviso de "já foi atualizado" depois de um auto-update ter
+// recarregado a página. Só dispara uma vez por atualização (a marca é
+// consumida e apagada aqui).
+async function maybeShowUpdateAppliedNotice(){
+  let pendingVersion = '';
+  try{ const p = await window.storage.get('pendingUpdateNotice'); pendingVersion = p.value || ''; }catch(e){ return; }
+  if(!pendingVersion) return;
+  try{ await window.storage.delete('pendingUpdateNotice'); }catch(e){}
+  if(pendingVersion === APP_VERSION){
+    showToast(`✅ Atualizado para v${APP_VERSION}`);
+  }
+  // Se a versão não bater (ex: o reload não chegou a pegar a versão nova
+  // por algum motivo), simplesmente descarta sem avisar — a próxima
+  // verificação de startup tenta de novo naturalmente.
+}
+
 function toggleDevMode(){
   devMode = !devMode;
   if(!devMode) showHiddenData = false;
