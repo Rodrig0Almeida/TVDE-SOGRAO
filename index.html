@@ -853,7 +853,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // Corrida+ — lógica do app.
 // Documentação detalhada de arquitetura, sincronização, encriptação e
 // easter eggs: ver corridaplus-docs.md (ficheiro separado).
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.3.1';
 
 if (!window.storage) {
   window.storage = {
@@ -2681,9 +2681,26 @@ function renderEarningsList(items, emptyMsg){
         <div class="income-name">${platformLabel(it.platform)}</div>
         <div class="income-sub">${formatDateStr(it.date)}${it.km ? ' · ' + it.km + ' km' : ''}${it.hours ? ' · ' + it.hours + 'h' : ''}</div>
       </div>
-      <div class="bill-amount-edit" style="pointer-events:none;">${fmt(it.amount)}</div>
+      <div class="bill-amount-edit"><input type="number" class="bill-amount-input" inputmode="decimal" value="${it.amount}" onchange="updateEarningAmount('${it.id}', this.value)" /></div>
       <div class="bill-delete" onclick="removeEarning('${it.id}')">✕</div>
     </div>`).join('');
+}
+// Edita o valor de um ganho diretamente na lista (mesmo padrão das
+// despesas fixas: campo inline, sem precisar de abrir sheet). Procura em
+// todos os meses porque a lista de Ganhos pode incluir dias de um mês
+// vizinho (visão Semana pode atravessar a fronteira de mês).
+async function updateEarningAmount(id, value){
+  const amount = parseFloat(value) || 0;
+  if(amount <= 0){ showToast('Digite um valor válido'); renderGanhos(); return; }
+  let found = false;
+  Object.keys(monthData).forEach(k => {
+    const match = (monthData[k].earnings || []).find(e => e.id === id);
+    if(match){ match.amount = amount; found = true; }
+  });
+  if(!found){ showToast('Ganho não encontrado'); return; }
+  await persistMonthData();
+  renderGanhos();
+  showToast('Ganho atualizado');
 }
 function renderEarningsCardsAndSummary(items, fixedTotal, expenses){
   const totalUber = sumByPlatform(items, 'uber');
