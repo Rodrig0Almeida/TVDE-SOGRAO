@@ -109,6 +109,36 @@ reduz bastante o risco de perda de dados em edições quase-simultâneas,
 porque a maior parte do estado (earnings, expenses, bills) é merge por união
 de IDs, não substituição.
 
+### 3.1 Lápides de exclusão ("tombstones")
+
+União por ID tem um efeito colateral perigoso: apagar um ganho localmente
+e depois correr o merge de pré-push faz esse ganho **voltar**, porque ele
+ainda existe na planilha remota e o merge não tem como saber que "existe
+remotamente, não existe localmente" significa "apagado aqui" em vez de
+"criado noutro dispositivo".
+
+A correção é um conjunto `deletedIds` (persistido em `window.storage`,
+device-local, nunca sincronizado):
+
+- Cada função de exclusão (`removeEarning`, `deleteVariableExpense`,
+  `deleteBill`, `unpayBill`, `restoreHiddenBill`) chama `markDeleted(key)`
+  com uma chave identificando o que foi apagado — `earning:<id>`,
+  `expense:<id>`, `bill:<id>`, `billsPaidKey:<mês>:<billId>`,
+  `hiddenBillsKey:<mês>:<billId>`.
+- `mergeRemoteIntoLocal()` ignora qualquer item remoto cuja chave esteja em
+  `deletedIds` — ou seja, não volta a inserir algo que foi apagado aqui,
+  mesmo que ainda exista na nuvem.
+- As lápides são limpas automaticamente assim que um push tiver sucesso
+  (`clearDeletedIdsAfterSuccessfulPush()`) — nesse ponto a nuvem já reflete
+  a exclusão, então não há mais risco do item "voltar", e a lista não
+  cresce indefinidamente.
+- **"Apagar todos os dados"** (`confirmResetAll()`) é tratado como caso
+  especial: em vez de um push normal (que faria merge e traria tudo de
+  volta da nuvem antes de enviar o estado vazio), chama
+  `pushToCloud(undefined, true)` — o segundo parâmetro (`skipMerge`) pula o
+  merge de pré-push inteiramente, porque apagar tudo é uma sobrescrita
+  intencional, não uma edição incremental.
+
 ## 4. IVA, comissão e cálculo de lucro
 
 A fórmula usada em todas as telas (Ganhos, Despesas, Estatísticas, Lucro):
@@ -243,7 +273,7 @@ O botão manual "Procurar atualização" no Modo Dev continua a existir e
 mantém o comportamento antigo (pergunta via `confirm()`), útil para forçar
 uma verificação imediata sem esperar pela próxima abertura.
 
-## 10. Alterações desta versão (v3.1.0 → v3.2.0)
+## 10. Alterações desta versão (v3.1.0 → v3.2.2)
 
 - **Logo da tela de carregamento**: corrigido para ser byte-idêntico ao
   ícone real do app (favicon/manifest/apple-touch-icon) — antes usava uma
@@ -264,3 +294,9 @@ uma verificação imediata sem esperar pela próxima abertura.
   sozinho quando encontra uma versão nova publicada, sem perguntar nada —
   o aviso de "atualizado" só aparece depois, na abertura seguinte. Ver
   secção 9.
+- **Correção: ganho/despesa apagado voltava sozinho**: o merge de
+  pré-push estava a reintroduzir itens apagados localmente (porque ainda
+  existiam na planilha remota no momento do merge). Corrigido com um
+  sistema de lápides de exclusão (`deletedIds`) que impede o merge de
+  trazer de volta algo apagado neste dispositivo. "Apagar todos os dados"
+  também foi corrigido para não sofrer do mesmo problema. Ver secção 3.1.
