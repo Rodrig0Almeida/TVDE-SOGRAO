@@ -259,21 +259,42 @@ exige dois passos, feitos em duas aberturas diferentes do app:
    - Se a rede falhar ou a página não responder, falha silenciosamente e
      tenta de novo na próxima abertura.
 
-2. **`maybeShowUpdateAppliedNotice()`** — roda logo no início da abertura
-   seguinte, já com a página recarregada (portanto já na versão nova). Se
-   houver um `pendingUpdateNotice` pendente:
-   - Se a versão atual bater com a marcada, mostra um toast simples —
-     `✅ Atualizado para vX.X.X` — confirmando que já aconteceu.
-   - A marca é sempre apagada depois de lida, para o aviso não repetir.
-   - Se por algum motivo a versão não bater (ex: o reload não chegou a
-     pegar a versão nova), descarta silenciosamente sem avisar; a próxima
-     verificação de startup tenta de novo naturalmente.
+2. **`consumePendingUpdateNotice()`** — chamada logo no início da
+   abertura seguinte, já com a página recarregada (portanto já na versão
+   nova). Consome e apaga a marca `pendingUpdateNotice`, e devolve
+   `true`/`false` conforme a versão atual bater ou não com a marcada —
+   não mostra nenhuma UI diretamente, quem chama decide onde exibir o
+   aviso.
 
-O botão manual "Procurar atualização" no Modo Dev continua a existir e
-mantém o comportamento antigo (pergunta via `confirm()`), útil para forçar
-uma verificação imediata sem esperar pela próxima abertura.
+### 9.1 Por que o aviso vive na splash, não num toast separado
 
-## 10. Alterações desta versão (v3.1.0 → v3.2.2)
+A primeira versão deste recurso mostrava um `showToast()` separado depois
+de a tela de carregamento (splash) desaparecer. Na prática, isso nunca
+era visto: a splash tem `z-index:999` (mais alto que o toast,
+`z-index:100`) e o seu fade-out demora 400ms — como o toast era disparado
+quase no mesmo instante em que a splash começava a desaparecer, ficava
+tapado pela splash durante boa parte da sua própria animação de entrada.
+
+A correção **unifica as duas telas**: em vez de um toast concorrendo com a
+splash pela mesma janela de tempo, `loadAll()` verifica
+`consumePendingUpdateNotice()` **antes** de esconder a splash e, se
+verdadeiro, reaproveita a própria splash para mostrar a mensagem:
+
+```js
+const updateApplied = await consumePendingUpdateNotice();
+if(updateApplied){
+  setSplash(`✅ Atualizado para v${APP_VERSION}`);
+  await new Promise(r => setTimeout(r, 1100));
+}
+hideSplash();
+```
+
+Ou seja, a splash troca o texto de "A sincronizar…" para "✅ Atualizado
+para vX.X.X", fica visível mais 1.1s, e só depois começa a desvanecer —
+garantindo que o aviso é sempre visto, porque não há mais duas telas
+disputando o mesmo espaço e o mesmo instante.
+
+## 10. Alterações desta versão (v3.1.0 → v3.3.2)
 
 - **Logo da tela de carregamento**: corrigido para ser byte-idêntico ao
   ícone real do app (favicon/manifest/apple-touch-icon) — antes usava uma
@@ -300,3 +321,23 @@ uma verificação imediata sem esperar pela próxima abertura.
   sistema de lápides de exclusão (`deletedIds`) que impede o merge de
   trazer de volta algo apagado neste dispositivo. "Apagar todos os dados"
   também foi corrigido para não sofrer do mesmo problema. Ver secção 3.1.
+- **Editar despesa variável**: as despesas variáveis (Despesas → Despesas
+  variáveis) agora têm um botão de editar (✏️) além do de apagar (✕). Abre
+  o mesmo sheet de criação, já preenchido, e grava por cima do registo
+  existente (mantém o mesmo `id`) em vez de apagar e recriar. Se a data for
+  alterada para outro mês, a despesa move-se automaticamente para o mês
+  correto. `openExpenseSheet(existingExp)` decide entre modo "nova" e
+  "editar" conforme recebe ou não um objeto de despesa existente;
+  `openNewExpenseSheet()` continua a existir como atalho para o modo
+  "nova".
+- **Editar valor de um ganho diretamente na lista**: o valor de cada ganho
+  em Ganhos agora é um campo editável inline (mesmo padrão já usado nas
+  despesas fixas), em vez de só texto estático. `updateEarningAmount(id,
+  value)` procura o ganho em todos os meses (a lista pode atravessar
+  fronteira de mês na visão Semana) e grava o novo valor.
+- **Correção: aviso de "app atualizado" nunca aparecia**: o toast
+  ficava tapado pela tela de carregamento (splash), que tem `z-index`
+  mais alto e ainda estava a desvanecer no momento em que o toast era
+  disparado. As duas telas foram unificadas — a splash agora mostra
+  diretamente "✅ Atualizado para vX.X.X" antes de desaparecer, em vez de
+  um toast concorrente. Ver secção 9.1.
