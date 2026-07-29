@@ -853,7 +853,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // Corrida+ — lógica do app.
 // Documentação detalhada de arquitetura, sincronização, encriptação e
 // easter eggs: ver corridaplus-docs.md (ficheiro separado).
-const APP_VERSION = '3.2.1';
+const APP_VERSION = '3.2.2';
 
 if (!window.storage) {
   window.storage = {
@@ -1250,6 +1250,7 @@ async function loadAll(){
   }
 
   await loadLocalOnlySettings();
+  await loadDeletedIdsFromStorage();
   await loadFromLocalStorage();
 
   applyTabVisibility();
@@ -1331,10 +1332,37 @@ function pruneEmptyMonths(source){
 // outro. Ver docs para a estratégia de merge (união por ID em listas,
 // "local ganha" em conflitos de valor único).
 // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// LÁPIDES DE EXCLUSÃO ("tombstones") — necessárias porque o merge acima é
+// uma UNIÃO por ID: sem isto, apagar um ganho localmente e a seguir correr
+// pullLatestAndMergeBeforePush() faria esse ganho "voltar", porque ele
+// ainda existe na planilha e o merge não sabe distinguir "novo item criado
+// noutro dispositivo" de "item apagado neste". deletedIds guarda os IDs
+// apagados localmente (e ainda não confirmados como apagados na nuvem);
+// o merge ignora qualquer item remoto cujo ID esteja aqui. É limpo assim
+// que um push tiver sucesso (nesse ponto a nuvem já reflete a exclusão,
+// então não há mais risco de o item "voltar"). Device-local, persistido
+// em window.storage, nunca sincronizado como parte do payload.
+// ---------------------------------------------------------------
+let deletedIds = new Set();
+async function loadDeletedIdsFromStorage(){
+  try{ const d = await window.storage.get('deletedIds'); deletedIds = new Set(JSON.parse(d.value)); }
+  catch(e){ deletedIds = new Set(); }
+}
+async function persistDeletedIds(){
+  try{ await window.storage.set('deletedIds', JSON.stringify([...deletedIds])); }catch(e){}
+}
+function markDeleted(key){ deletedIds.add(key); persistDeletedIds(); }
+async function clearDeletedIdsAfterSuccessfulPush(){
+  if(deletedIds.size === 0) return;
+  deletedIds = new Set();
+  try{ await window.storage.set('deletedIds', JSON.stringify([])); }catch(e){}
+}
+
 function mergeRemoteIntoLocal(remote){
   const remoteBills = Array.isArray(remote.bills) ? remote.bills : [];
   const localBillIds = new Set(bills.map(b=>b.id));
-  remoteBills.forEach(rb => { if(!localBillIds.has(rb.id)) bills.push(rb); });
+  remoteBills.forEach(rb => { if(!localBillIds.has(rb.id) && !deletedIds.has(`bill:${rb.id}`)) bills.push(rb); });
 
   const remoteMonthData = (remote.monthData && typeof remote.monthData === 'object') ? remote.monthData : {};
   Object.keys(remoteMonthData).forEach(key => {
@@ -1342,14 +1370,21 @@ function mergeRemoteIntoLocal(remote){
     const localEntry  = ensureMonthEntry(key);
 
     const localEarningIds = new Set(localEntry.earnings.map(e=>e.id));
-    (remoteEntry.earnings || []).forEach(e => { if(!localEarningIds.has(e.id)) localEntry.earnings.push(e); });
+    (remoteEntry.earnings || []).forEach(e => { if(!localEarningIds.has(e.id) && !deletedIds.has(`earning:${e.id}`)) localEntry.earnings.push(e); });
 
     const localExpenseIds = new Set(localEntry.variableExpenses.map(e=>e.id));
-    (remoteEntry.variableExpenses || []).forEach(e => { if(!localExpenseIds.has(e.id)) localEntry.variableExpenses.push(e); });
+    (remoteEntry.variableExpenses || []).forEach(e => { if(!localExpenseIds.has(e.id) && !deletedIds.has(`expense:${e.id}`)) localEntry.variableExpenses.push(e); });
+
+    const remoteBillsPaid   = remoteEntry.billsPaid   || {};
+    const remoteHiddenBills = remoteEntry.hiddenBills || {};
+    const filteredBillsPaid = {};
+    Object.keys(remoteBillsPaid).forEach(billId => { if(!deletedIds.has(`billsPaidKey:${key}:${billId}`)) filteredBillsPaid[billId] = remoteBillsPaid[billId]; });
+    const filteredHiddenBills = {};
+    Object.keys(remoteHiddenBills).forEach(billId => { if(!deletedIds.has(`hiddenBillsKey:${key}:${billId}`)) filteredHiddenBills[billId] = remoteHiddenBills[billId]; });
 
     localEntry.billOverrides = { ...(remoteEntry.billOverrides||{}), ...localEntry.billOverrides };
-    localEntry.billsPaid     = { ...(remoteEntry.billsPaid||{}),     ...localEntry.billsPaid };
-    localEntry.hiddenBills   = { ...(remoteEntry.hiddenBills||{}),   ...localEntry.hiddenBills };
+    localEntry.billsPaid     = { ...filteredBillsPaid,   ...localEntry.billsPaid };
+    localEntry.hiddenBills   = { ...filteredHiddenBills, ...localEntry.hiddenBills };
   });
 
   const remoteProfile = (remote.profile && typeof remote.profile === 'object') ? remote.profile : {};
@@ -1379,13 +1414,16 @@ async function pullLatestAndMergeBeforePush(){
   }
 }
 
-async function pushToCloud(migrationUrl){
+async function pushToCloud(migrationUrl, skipMerge){
   if(!syncUrl) return;
 
   // Busca e mescla a versão mais recente da nuvem ANTES de montar o payload
   // a enviar — assim a edição do utilizador é aplicada sobre dados frescos,
   // em vez de arriscar sobrescrever mudanças feitas noutro dispositivo.
-  await pullLatestAndMergeBeforePush();
+  // skipMerge=true é usado só por confirmResetAll(): apagar tudo é uma
+  // sobrescrita intencional, não uma edição incremental — não faz sentido
+  // "mesclar de volta" dados que o utilizador acabou de mandar apagar.
+  if(!skipMerge){ await pullLatestAndMergeBeforePush(); }
 
   const payload = { bills, monthData: pruneEmptyMonths(monthData), profile };
   if(migrationUrl){ payload.syncUrl = migrationUrl; }
@@ -1412,6 +1450,9 @@ async function pushToCloud(migrationUrl){
     setSyncStatus('synced');
     logSyncEvent('success', 'Dados enviados para a nuvem', `${Date.now()-pushStart}ms · ${body.length} bytes`);
     await persistLocalOnlySilently();
+    // A nuvem agora reflete o estado local (incluindo exclusões) — as
+    // lápides deixam de ser necessárias.
+    await clearDeletedIdsAfterSuccessfulPush();
   }catch(err){
     clearTimeout(pushTimeoutId);
     const elapsedMs = Date.now() - pushStart;
@@ -1773,7 +1814,16 @@ async function importFromJson(){
 async function confirmResetAll(){
   if(!confirm('Isso vai apagar TODOS os dados. Tem certeza?')) return;
   bills = []; monthData = {};
-  await persistBills(); await persistMonthData();
+  try{ await window.storage.set('bills', JSON.stringify(bills)); }catch(e){}
+  try{ await window.storage.set('monthData', JSON.stringify(monthData)); }catch(e){}
+  // Apagar tudo é uma sobrescrita intencional — envia direto, sem passar
+  // pelo merge de pré-push (senão os dados que acabaram de ser apagados
+  // voltariam da nuvem antes do envio). Cancela também qualquer push
+  // debounced pendente para não haver uma segunda gravação por cima.
+  clearTimeout(syncPushTimer);
+  deletedIds = new Set();
+  try{ await window.storage.set('deletedIds', JSON.stringify([])); }catch(e){}
+  if(syncUrl){ setSyncStatus('saving'); await pushToCloud(undefined, true); }
   showToast('Tudo apagado'); goGanhos();
 }
 
@@ -2830,6 +2880,7 @@ async function confirmAddIncome(){
 async function removeEarning(id){
   if(!confirm('Remover este ganho?')) return;
   Object.keys(monthData).forEach(k => { monthData[k].earnings = (monthData[k].earnings||[]).filter(e => e.id !== id); });
+  markDeleted(`earning:${id}`);
   await persistMonthData(); renderGanhos();
 }
 
@@ -2901,6 +2952,7 @@ async function deleteVariableExpense(id){
   Object.keys(monthData).forEach(k => {
     if(monthData[k].variableExpenses){ monthData[k].variableExpenses = monthData[k].variableExpenses.filter(e => e.id !== id); }
   });
+  markDeleted(`expense:${id}`);
   await persistMonthData(); renderDespesas();
 }
 
@@ -2939,6 +2991,7 @@ async function payBill(billId){
 async function unpayBill(billId){
   const entry = ensureMonthEntry(currentMonthKey);
   delete entry.billsPaid[billId];
+  markDeleted(`billsPaidKey:${currentMonthKey}:${billId}`);
   await persistMonthData(); renderDespesas();
 }
 async function updateBillAmount(billId, value){
@@ -2954,6 +3007,7 @@ async function deleteBill(billId){
     delete monthData[k].billsPaid?.[billId];
     delete monthData[k].hiddenBills?.[billId];
   });
+  markDeleted(`bill:${billId}`);
   await persistBills();
   await persistMonthData();
   renderDespesas();
@@ -3585,6 +3639,7 @@ async function removeExpenseFromSettings(id) { await deleteVariableExpense(id); 
 async function restoreHiddenBill(billId) {
   const entry = ensureMonthEntry(currentMonthKey);
   delete entry.hiddenBills[billId];
+  markDeleted(`hiddenBillsKey:${currentMonthKey}:${billId}`);
   await persistMonthData();
   showToast('Despesa fixa restaurada');
   renderSettings();
