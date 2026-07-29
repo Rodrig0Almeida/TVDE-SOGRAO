@@ -853,7 +853,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // Corrida+ — lógica do app.
 // Documentação detalhada de arquitetura, sincronização, encriptação e
 // easter eggs: ver corridaplus-docs.md (ficheiro separado).
-const APP_VERSION = '3.2.2';
+const APP_VERSION = '3.3.0';
 
 if (!window.storage) {
   window.storage = {
@@ -2903,7 +2903,8 @@ function renderDespesas(){
         </div>
         <div class="bill-amount-wrap">
           <div class="bill-amount-edit" style="pointer-events:none;">${fmt(exp.amount)}</div>
-          <div class="bill-delete" onclick="deleteVariableExpense('${exp.id}')">✕</div>
+          <div class="bill-delete" style="font-size:15px;" onclick="editVariableExpense('${exp.id}')" title="Editar despesa">✏️</div>
+          <div class="bill-delete" onclick="deleteVariableExpense('${exp.id}')" title="Apagar despesa">✕</div>
         </div>
       </div>`;
   }).join('');
@@ -2912,20 +2913,43 @@ function renderDespesas(){
     `<div class="add-dashed-btn" style="border-style:solid;margin-top: 8px;margin-bottom:20px;" onclick="openNewExpenseSheet()">＋ Adicionar despesa variável</div>`;
   renderMonthSummary(entry);
 }
-function openNewExpenseSheet(){
+
+// Sheet único para criar OU editar uma despesa variável — quando chamado
+// sem argumento (ou null), abre em modo "nova"; quando recebe o objeto da
+// despesa existente, pré-preenche os campos e muda para modo "editar".
+function openExpenseSheet(existingExp){
+  const isEdit = !!existingExp;
   const today = isoDate(new Date());
+  const cat = existingExp ? existingExp.category : EXPENSE_CATEGORIES[0].key;
+  const dateVal = existingExp ? (existingExp.date || today) : today;
+  const amountVal = existingExp ? existingExp.amount : '';
+  const litersVal = (existingExp && existingExp.liters) ? existingExp.liters : '';
+  const noteVal = (existingExp && existingExp.note) ? existingExp.note : '';
   openSheet(`
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Nova despesa</div>
-    <div class="sheet-sub">Registe uma despesa do dia a dia.</div>
-    <div class="field"><label>Categoria</label><select id="newExpenseCategory" onchange="onExpenseCategoryChange()">${EXPENSE_CATEGORIES.map(c=>`<option value="${c.key}">${c.emoji} ${c.label}</option>`).join('')}</select></div>
-    <div class="field"><label>Data</label><input type="date" id="newExpenseDate" value="${today}" /></div>
-    <div class="field"><label>Valor (€)</label><div class="field-money"><input type="number" id="newExpenseAmount" placeholder="0,00" inputmode="decimal" autofocus /></div></div>
-    <div class="field" id="fuelLitersField" style="display:none;"><label>Litros abastecidos (opcional)</label><input type="number" id="newExpenseLiters" placeholder="0.0" inputmode="decimal" step="0.1" /></div>
-    <div class="field"><label>Nota (opcional)</label><input type="text" id="newExpenseNote" placeholder="ex: posto Shell, troca de óleo" maxlength="60" /></div>
-    <button class="btn btn-primary" onclick="confirmNewExpense()">Salvar despesa</button>
+    <div class="sheet-title">${isEdit ? 'Editar despesa' : 'Nova despesa'}</div>
+    <div class="sheet-sub">${isEdit ? 'Corrija os dados desta despesa.' : 'Registe uma despesa do dia a dia.'}</div>
+    <div class="field"><label>Categoria</label><select id="newExpenseCategory" onchange="onExpenseCategoryChange()">${EXPENSE_CATEGORIES.map(c=>`<option value="${c.key}" ${c.key===cat?'selected':''}>${c.emoji} ${c.label}</option>`).join('')}</select></div>
+    <div class="field"><label>Data</label><input type="date" id="newExpenseDate" value="${dateVal}" /></div>
+    <div class="field"><label>Valor (€)</label><div class="field-money"><input type="number" id="newExpenseAmount" placeholder="0,00" inputmode="decimal" value="${amountVal}" autofocus /></div></div>
+    <div class="field" id="fuelLitersField" style="display:${cat==='combustivel'?'block':'none'};"><label>Litros abastecidos (opcional)</label><input type="number" id="newExpenseLiters" placeholder="0.0" inputmode="decimal" step="0.1" value="${litersVal}" /></div>
+    <div class="field"><label>Nota (opcional)</label><input type="text" id="newExpenseNote" placeholder="ex: posto Shell, troca de óleo" maxlength="60" value="${escapeHtml(noteVal)}" /></div>
+    <button class="btn btn-primary" onclick="${isEdit ? `confirmEditExpense('${existingExp.id}')` : 'confirmNewExpense()'}">${isEdit ? 'Salvar alterações' : 'Salvar despesa'}</button>
+    ${isEdit ? `<button class="btn btn-danger-text" onclick="closeSheet(); deleteVariableExpense('${existingExp.id}')">Apagar despesa</button>` : ''}
     <button class="btn btn-ghost" onclick="closeSheet()">Cancelar</button>
   `);
+}
+function openNewExpenseSheet(){ openExpenseSheet(null); }
+// Localiza a despesa pelo id (pode estar em qualquer mês) e abre o sheet
+// já preenchido para edição.
+function editVariableExpense(id){
+  let found = null;
+  Object.keys(monthData).forEach(k => {
+    const match = (monthData[k].variableExpenses || []).find(e => e.id === id);
+    if(match) found = match;
+  });
+  if(!found){ showToast('Despesa não encontrada'); return; }
+  openExpenseSheet(found);
 }
 function onExpenseCategoryChange(){
   const cat = document.getElementById('newExpenseCategory').value;
@@ -2946,6 +2970,34 @@ async function confirmNewExpense(){
   if(liters > 0) exp.liters = liters;
   entry.variableExpenses.push(exp);
   await persistMonthData(); closeSheet(); showToast('Despesa registrada'); renderDespesas();
+}
+// Edita uma despesa existente no lugar (mantém o mesmo id e timestamp
+// original). Se a data mudar para um mês diferente, a despesa é movida do
+// mês antigo para o novo automaticamente.
+async function confirmEditExpense(id){
+  const category = document.getElementById('newExpenseCategory').value;
+  const amount    = parseFloat(document.getElementById('newExpenseAmount').value);
+  const note      = document.getElementById('newExpenseNote').value.trim();
+  const dateVal   = document.getElementById('newExpenseDate').value;
+  const liters    = category === 'combustivel' ? (parseFloat(document.getElementById('newExpenseLiters').value) || 0) : 0;
+  if(!amount || amount <= 0){ showToast('Digite um valor válido'); return; }
+
+  let removed = null;
+  Object.keys(monthData).forEach(k => {
+    const list = monthData[k].variableExpenses || [];
+    const idx = list.findIndex(e => e.id === id);
+    if(idx !== -1){ removed = list.splice(idx, 1)[0]; }
+  });
+  if(!removed){ showToast('Despesa não encontrada'); closeSheet(); return; }
+
+  const expDate = dateVal || removed.date || isoDate(new Date());
+  const expMonthKey = expDate.slice(0, 7);
+  const entry = ensureMonthEntry(expMonthKey);
+  const updated = { ...removed, category, amount, note, date: expDate };
+  if(liters > 0) updated.liters = liters; else delete updated.liters;
+  entry.variableExpenses.push(updated);
+
+  await persistMonthData(); closeSheet(); showToast('Despesa atualizada'); renderDespesas();
 }
 async function deleteVariableExpense(id){
   if(!confirm('Remover esta despesa?')) return;
