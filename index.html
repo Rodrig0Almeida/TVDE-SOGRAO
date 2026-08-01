@@ -383,6 +383,7 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
   </svg>
   <div class="splash-title" style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;letter-spacing:-0.01em;">Corrida+</div>
   <div id="splashMsg" class="splash-msg" style="font-size:12px;margin-top:10px;font-weight:500;">A carregar…</div>
+  <div id="splashVersion" class="splash-msg" style="font-size:10px;margin-top:14px;font-weight:600;opacity:0.65;letter-spacing:0.04em;text-transform:uppercase;"></div>
 </div>
 
 <div id="hackScreen" style="
@@ -853,7 +854,15 @@ body.dark button[onclick="lockSyncUrl()"] { background: var(--vault); color: #ff
 // Corrida+ — lógica do app.
 // Documentação detalhada de arquitetura, sincronização, encriptação e
 // easter eggs: ver corridaplus-docs.md (ficheiro separado).
-const APP_VERSION = '3.3.2';
+const APP_VERSION = '3.3.3';
+// Mostra o número da versão na tela de carregamento imediatamente (sem
+// esperar por loadAll/qualquer coisa assíncrona) — sempre visível,
+// independente da mensagem dinâmica ("A carregar…", "A sincronizar…",
+// "Atualizado…") que ocupa o elemento #splashMsg logo acima.
+(function showSplashVersion(){
+  const el = document.getElementById('splashVersion');
+  if(el) el.textContent = `v${APP_VERSION}`;
+})();
 
 if (!window.storage) {
   window.storage = {
